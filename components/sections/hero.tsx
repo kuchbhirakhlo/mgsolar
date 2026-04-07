@@ -104,15 +104,13 @@ export function HeroSection() {
           {/* Video */}
           <div className="relative h-96 md:h-full min-h-96">
             <div className="absolute inset-0 bg-gradient-to-br from-secondary/30 to-white/10 rounded-2xl overflow-hidden">
-              <video
-                autoPlay
-                muted
-                loop
-                playsInline
-                className="w-full h-full object-cover rounded-lg shadow-lg"
-              >
-                <source src="/animate.mp4" type="video/mp4" />
-              </video>
+         <Image           
+          src="/homeheroimage.jpg"
+            alt="Hero Video"
+            layout="fill"
+            objectFit="cover"
+            className="object-cover w-full h-full rounded-2xl"
+          />
             </div>
           </div>
         </div>

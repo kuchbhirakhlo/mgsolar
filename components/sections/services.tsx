@@ -39,21 +39,21 @@ export function ServicesSection() {
   const services = [
     {
       icon: <ResidentialIcon />,
-      bgImage: 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)',
+      image: '/heroimage.jpg',
       title: t.services.items.residential.name,
       description: t.services.items.residential.description,
       features: ['Panel Installation', 'Inverter Setup', 'Wiring & Safety', 'Monitoring System'],
     },
     {
       icon: <CommercialIcon />,
-      bgImage: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
+      image: '/commercialsolarpanel.webp',
       title: t.services.items.commercial.name,
       description: t.services.items.commercial.description,
       features: ['Large Scale Systems', 'Roof Assessment', 'Grid Integration', 'Maintenance Plans'],
     },
     {
       icon: <MaintenanceIcon />,
-      bgImage: 'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%)',
+      image: '/solarservices.jpeg',
       title: t.services.items.maintenance.name,
       description: t.services.items.maintenance.description,
       features: ['Regular Checks', 'Cleaning Service', 'Repairs', 'Performance Optimization'],
@@ -76,11 +76,8 @@ export function ServicesSection() {
               key={index}
               className="border-muted hover:border-accent hover:shadow-lg transition-all duration-300 overflow-hidden"
             >
-              <div 
-                className="h-48 flex items-center justify-center"
-                style={{ background: service.bgImage }}
-              >
-                {service.icon}
+              <div className="h-48 overflow-hidden">
+                <img src={service.image} alt="" className="w-full h-full object-cover" />
               </div>
               <CardHeader>
                 <CardTitle className="text-2xl text-primary">{service.title}</CardTitle>
