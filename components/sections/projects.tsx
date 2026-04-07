@@ -4,6 +4,44 @@ import { useLanguage } from '@/lib/language-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 
+const ResidentialIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-16 h-16 text-primary">
+    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    <polyline points="9 22 9 12 15 12 15 22" />
+  </svg>
+);
+
+const FactoryIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-16 h-16 text-primary">
+    <path d="M2 20h20" />
+    <path d="M5 20V8l7-5 7 5v12" />
+    <path d="M9 20v-6h6v6" />
+  </svg>
+);
+
+const SchoolIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-16 h-16 text-primary">
+    <path d="m4 6 8-4 8 4" />
+    <path d="m18 10 4 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8l4-2" />
+    <path d="M14 22v-4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v4" />
+    <path d="M18 5h-2a2 2 0 0 0-2 2v0a2 2 0 0 0 2 2h2" />
+    <path d="M8 5H6a2 2 0 0 0-2 2v0a2 2 0 0 0 2 2h2" />
+  </svg>
+);
+
+const HotelIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-16 h-16 text-primary">
+    <path d="M18 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2Z" />
+    <path d="m9 16 .348-.24c1.465-1.013 3.84-1.013 5.304 0L15 16" />
+    <path d="M8 7h.01" />
+    <path d="M8 11h.01" />
+    <path d="M16 7h.01" />
+    <path d="M16 11h.01" />
+    <path d="M12 7h.01" />
+    <path d="M12 11h.01" />
+  </svg>
+);
+
 const recentProjects = [
   {
     id: '1',
@@ -11,7 +49,7 @@ const recentProjects = [
     location: 'Mumbai, Maharashtra',
     capacity: '250 kW',
     date: '2024',
-    image: '🏘️',
+    icon: <ResidentialIcon />,
   },
   {
     id: '2',
@@ -19,7 +57,7 @@ const recentProjects = [
     location: 'Pune, Maharashtra',
     capacity: '500 kW',
     date: '2024',
-    image: '🏭',
+    icon: <FactoryIcon />,
   },
   {
     id: '3',
@@ -27,7 +65,7 @@ const recentProjects = [
     location: 'Bangalore, Karnataka',
     capacity: '150 kW',
     date: '2023',
-    image: '🏫',
+    icon: <SchoolIcon />,
   },
   {
     id: '4',
@@ -35,7 +73,7 @@ const recentProjects = [
     location: 'Goa, Goa',
     capacity: '200 kW',
     date: '2023',
-    image: '🏨',
+    icon: <HotelIcon />,
   },
 ];
 
@@ -59,7 +97,7 @@ export function ProjectsSection() {
               className="overflow-hidden hover:shadow-lg hover:border-accent transition-all duration-300 group"
             >
               <div className="h-40 bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center group-hover:bg-gradient-to-br group-hover:from-primary/30 group-hover:to-secondary/30 transition-all">
-                <span className="text-5xl">{project.image}</span>
+                {project.icon}
               </div>
               <CardHeader>
                 <CardTitle className="text-lg text-primary">{project.title}</CardTitle>

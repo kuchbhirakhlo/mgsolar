@@ -1,10 +1,23 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useState } from 'react';
-import { Mail, Phone, User, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Mail, Phone, User, X, MapPin, Zap } from 'lucide-react';
 
-const sampleMessages = [
+interface Message {
+  id: string;
+  name: string;
+  email?: string;
+  phone: string;
+  city: string;
+  kw?: string;
+  message?: string;
+  date: string;
+  read: boolean;
+  type?: string;
+}
+
+const sampleMessages: Message[] = [
   {
     id: '1',
     name: 'Rajesh Patel',
@@ -26,8 +39,38 @@ const sampleMessages = [
 ];
 
 export default function AdminMessagesPage() {
-  const [messages, setMessages] = useState(sampleMessages);
-  const [selectedMessage, setSelectedMessage] = useState<(typeof messages)[0] | null>(null);
+  const [messages, setMessages] = useState<Message[]>(sampleMessages);
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchLeads();
+  }, []);
+
+  const fetchLeads = async () => {
+    try {
+      const response = await fetch('/api/quick-lead');
+      if (response.ok) {
+        const leads = await response.json();
+        if (leads.length > 0) {
+          const formattedLeads: Message[] = leads.map((lead: Record<string, string>) => ({
+            id: lead.id,
+            name: lead.name,
+            phone: lead.phone || lead.mobile,
+            city: lead.city,
+            kw: lead.kw,
+            date: new Date(lead.createdAt).toISOString().split('T')[0],
+            read: lead.read,
+            type: lead.type,
+          }));
+          setMessages([...formattedLeads.reverse(), ...sampleMessages]);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching leads:', error);
+    }
+    setLoading(false);
+  };
 
   const handleMarkRead = (id: string) => {
     setMessages(
@@ -46,13 +89,17 @@ export default function AdminMessagesPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-4xl font-bold text-primary mb-2">Contact Messages</h1>
-        <p className="text-foreground/70">Manage inquiries and messages from visitors</p>
+        <p className="text-foreground/70">Manage inquiries and quick leads from visitors</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Messages List */}
-        <div className="lg:col-span-1 space-y-4">
-          {messages.map((msg) => (
+        <div className="lg:col-span-1 space-y-4 max-h-[600px] overflow-y-auto">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : messages.map((msg) => (
             <Card
               key={msg.id}
               className={`cursor-pointer border-muted hover:border-accent transition ${
@@ -79,6 +126,11 @@ export default function AdminMessagesPage() {
                       New
                     </div>
                   )}
+                  {msg.type === 'quick-lead' && (
+                    <div className="ml-6 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded w-fit">
+                      Quick Lead
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -101,27 +153,47 @@ export default function AdminMessagesPage() {
               <CardContent className="space-y-6">
                 <div className="space-y-4">
                   <div className="flex items-center gap-3">
-                    <Mail className="w-5 h-5 text-primary" />
-                    <div>
-                      <p className="text-sm text-foreground/70">Email</p>
-                      <p className="font-medium">{selectedMessage.email}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
                     <Phone className="w-5 h-5 text-primary" />
                     <div>
                       <p className="text-sm text-foreground/70">Phone</p>
                       <p className="font-medium">{selectedMessage.phone}</p>
                     </div>
                   </div>
+                  <div className="flex items-center gap-3">
+                    <MapPin className="w-5 h-5 text-primary" />
+                    <div>
+                      <p className="text-sm text-foreground/70">City</p>
+                      <p className="font-medium">{selectedMessage.city}</p>
+                    </div>
+                  </div>
+                  {selectedMessage.kw && (
+                    <div className="flex items-center gap-3">
+                      <Zap className="w-5 h-5 text-primary" />
+                      <div>
+                        <p className="text-sm text-foreground/70">Solar Capacity</p>
+                        <p className="font-medium">{selectedMessage.kw} KW</p>
+                      </div>
+                    </div>
+                  )}
+                  {selectedMessage.email && (
+                    <div className="flex items-center gap-3">
+                      <Mail className="w-5 h-5 text-primary" />
+                      <div>
+                        <p className="text-sm text-foreground/70">Email</p>
+                        <p className="font-medium">{selectedMessage.email}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                <div className="border-t pt-4">
-                  <p className="text-sm text-foreground/70 mb-2">Message</p>
-                  <p className="text-foreground leading-relaxed">
-                    {selectedMessage.message}
-                  </p>
-                </div>
+                {selectedMessage.message && (
+                  <div className="border-t pt-4">
+                    <p className="text-sm text-foreground/70 mb-2">Message</p>
+                    <p className="text-foreground leading-relaxed">
+                      {selectedMessage.message}
+                    </p>
+                  </div>
+                )}
 
                 <div className="flex gap-2 pt-4 border-t">
                   <button
@@ -131,10 +203,10 @@ export default function AdminMessagesPage() {
                     Delete
                   </button>
                   <a
-                    href={`mailto:${selectedMessage.email}`}
+                    href={`tel:${selectedMessage.phone}`}
                     className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition"
                   >
-                    Reply
+                    Call
                   </a>
                 </div>
               </CardContent>

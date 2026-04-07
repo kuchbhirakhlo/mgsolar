@@ -4,9 +4,44 @@ import { useLanguage } from '@/lib/language-context';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useState, useEffect } from 'react';
 
 export function HeroSection() {
   const { t } = useLanguage();
+  const [showPopup, setShowPopup] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    mobile: '',
+    city: '',
+    kw: '',
+  });
+  const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowPopup(true), 5000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await fetch('/api/quick-lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          type: 'quick-lead',
+          createdAt: new Date().toISOString(),
+        }),
+      });
+      if (response.ok) {
+        setSubmitted(true);
+        setTimeout(() => setShowPopup(false), 2000);
+      }
+    } catch (error) {
+      console.error('Error submitting form:', error);
+    }
+  };
 
   return (
     <section
@@ -101,6 +136,88 @@ export function HeroSection() {
           </svg>
         </div>
       </div>
+
+      {/* Quick Contact Popup */}
+      {showPopup && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
+            <button
+              onClick={() => setShowPopup(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {submitted ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-primary mb-2">Thank You!</h3>
+                <p className="text-foreground/70">We will contact you soon.</p>
+              </div>
+            ) : (
+              <>
+                <h3 className="text-xl font-bold text-primary mb-2">Get Free Quote</h3>
+                <p className="text-foreground/70 mb-4">Fill details and we will call you</p>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Name *"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
+                      className="w-full text-gray-800 px-4 py-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="tel"
+                      placeholder="Mobile Number *"
+                      value={formData.mobile}
+                      onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                      required
+                      className="w-full text-gray-800 px-4 py-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="City *"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      required
+                      className="w-full text-gray-800 px-4 py-3  rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="How Much KW Solar (Optional)"
+                      value={formData.kw}
+                      onChange={(e) => setFormData({ ...formData, kw: e.target.value })}
+                      className="w-full text-gray-800 px-4 py-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+
+                  <Button
+                    type="submit"
+                    className="w-full bg-primary text-white hover:bg-primary/90 py-3"
+                  >
+                    Submit
+                  </Button>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   );
 }

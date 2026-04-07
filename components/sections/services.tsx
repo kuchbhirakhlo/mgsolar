@@ -4,24 +4,56 @@ import { useLanguage } from '@/lib/language-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle2 } from 'lucide-react';
 
+const ResidentialIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-16 h-16 text-primary">
+    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    <polyline points="9 22 9 12 15 12 15 22" />
+  </svg>
+);
+
+const CommercialIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-16 h-16 text-primary">
+    <rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
+    <path d="M9 22v-4h6v4" />
+    <path d="M8 6h.01" />
+    <path d="M16 6h.01" />
+    <path d="M12 6h.01" />
+    <path d="M12 10h.01" />
+    <path d="M12 14h.01" />
+    <path d="M16 10h.01" />
+    <path d="M16 14h.01" />
+    <path d="M8 10h.01" />
+    <path d="M8 14h.01" />
+  </svg>
+);
+
+const MaintenanceIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-16 h-16 text-primary">
+    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+  </svg>
+);
+
 export function ServicesSection() {
   const { t } = useLanguage();
 
   const services = [
     {
-      icon: '🏠',
+      icon: <ResidentialIcon />,
+      bgImage: 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)',
       title: t.services.items.residential.name,
       description: t.services.items.residential.description,
       features: ['Panel Installation', 'Inverter Setup', 'Wiring & Safety', 'Monitoring System'],
     },
     {
-      icon: '🏢',
+      icon: <CommercialIcon />,
+      bgImage: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
       title: t.services.items.commercial.name,
       description: t.services.items.commercial.description,
       features: ['Large Scale Systems', 'Roof Assessment', 'Grid Integration', 'Maintenance Plans'],
     },
     {
-      icon: '🔧',
+      icon: <MaintenanceIcon />,
+      bgImage: 'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%)',
       title: t.services.items.maintenance.name,
       description: t.services.items.maintenance.description,
       features: ['Regular Checks', 'Cleaning Service', 'Repairs', 'Performance Optimization'],
@@ -42,10 +74,15 @@ export function ServicesSection() {
           {services.map((service, index) => (
             <Card
               key={index}
-              className="border-muted hover:border-accent hover:shadow-lg transition-all duration-300"
+              className="border-muted hover:border-accent hover:shadow-lg transition-all duration-300 overflow-hidden"
             >
+              <div 
+                className="h-48 flex items-center justify-center"
+                style={{ background: service.bgImage }}
+              >
+                {service.icon}
+              </div>
               <CardHeader>
-                <div className="text-5xl mb-4">{service.icon}</div>
                 <CardTitle className="text-2xl text-primary">{service.title}</CardTitle>
                 <CardDescription className="text-base">{service.description}</CardDescription>
               </CardHeader>

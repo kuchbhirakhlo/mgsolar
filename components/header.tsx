@@ -37,6 +37,9 @@ export function Header() {
             <Link href="/projects" className="text-foreground hover:text-primary transition">
               {t.nav.projects}
             </Link>
+            <Link href="#brands" className="text-foreground hover:text-primary transition">
+              {t.nav.brands}
+            </Link>
             <Link href="/careers" className="text-foreground hover:text-primary transition">
               {t.nav.careers}
             </Link>
@@ -91,6 +94,13 @@ export function Header() {
               onClick={() => setMobileMenuOpen(false)}
             >
               {t.nav.projects}
+            </Link>
+            <Link
+              href="#brands"
+              className="block text-foreground hover:text-primary transition"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              {t.nav.brands}
             </Link>
             <Link
               href="/careers"
