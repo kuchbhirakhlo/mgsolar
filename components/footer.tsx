@@ -2,28 +2,28 @@
 
 import { useLanguage } from '@/lib/language-context';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export function Footer() {
   const { t } = useLanguage();
 
   return (
-    <footer className="bg-primary text-white py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <footer className="bg-primary text-white border-t border-white/10 py-12">
+      <div className="max-w-7xl mx-auto  px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-primary">
-                  <path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.591-1.59zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 10-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.758 17.303a.75.75 0 00-1.061-1.06l-1.591 1.59a.75.75 0 001.06 1.061l1.591-1.59zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.697 7.757a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 00-1.061 1.06l1.59 1.591z" />
-                </svg>
-              </div>
-              <span className="font-bold">{t.footer.company}</span>
-            </div>
-            <p className="text-blue-100 text-sm">Leading solar energy solutions provider</p>
+            <p className="text-blue-100 text-sm mb-4">
+              MG Solar is a leading provider of solar energy solutions, helping homes and businesses transition to clean, renewable energy. We specialize in residential and commercial solar installations, maintenance, and support services.
+            </p>
+            <p className="text-blue-100 text-sm">
+              <strong>Address:</strong> Lucknow, Uttar Pradesh, India<br />
+              <strong>Phone:</strong> +91 9876543210
+            </p>
+                       
           </div>
 
           <div>
-            <h3 className="font-semibold mb-4">Company</h3>
+            <h3 className="font-semibold mb-4">{t.footer.company}</h3>
             <ul className="space-y-2 text-sm text-blue-100">
               <li>
                 <Link href="#home" className="hover:text-secondary transition">
@@ -36,7 +36,7 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/careers" className="hover:text-secondary transition">
+                <Link href="#careers" className="hover:text-secondary transition">
                   {t.nav.careers}
                 </Link>
               </li>
@@ -52,14 +52,19 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/projects" className="hover:text-secondary transition">
-                  {t.projects.title}
+              <Link href="#projects" className="hover:text-secondary transition">
+                {t.projects.title}
+              </Link>
+              </li>
+              <li>
+                <Link href="#brands" className="hover:text-secondary transition">
+                  {t.nav.brands}
                 </Link>
               </li>
               <li>
-                <a href="#contact" className="hover:text-secondary transition">
+                <Link href="#contact" className="hover:text-secondary transition">
                   {t.contact.title}
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -68,7 +73,7 @@ export function Footer() {
             <h3 className="font-semibold mb-4">Connect</h3>
             <ul className="space-y-2 text-sm text-blue-100">
               <li>
-                <a href="#" className="hover:text-secondary transition">
+                <a href="https://www.facebook.com/mgsolarcompany/" className="hover:text-secondary transition">
                   Facebook
                 </a>
               </li>
@@ -84,7 +89,9 @@ export function Footer() {
               </li>
             </ul>
           </div>
+          
         </div>
+        
 
         <div className="border-t border-white/10 pt-8 text-center text-sm text-blue-100">
           <p>

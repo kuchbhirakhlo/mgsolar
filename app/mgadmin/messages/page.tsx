@@ -15,6 +15,7 @@ interface Message {
   date: string;
   read: boolean;
   type?: string;
+  lastName?: string;
 }
 
 const sampleMessages: Message[] = [
@@ -23,6 +24,7 @@ const sampleMessages: Message[] = [
     name: 'Rajesh Patel',
     email: 'rajesh@example.com',
     phone: '+91 9876543210',
+    city: 'Mumbai',
     message: 'Interested in solar installation for my residential complex',
     date: '2024-01-15',
     read: false,
@@ -32,6 +34,7 @@ const sampleMessages: Message[] = [
     name: 'Priya Sharma',
     email: 'priya@example.com',
     phone: '+91 9876543211',
+    city: 'Delhi',
     message: 'Need quote for commercial solar system',
     date: '2024-01-14',
     read: true,
@@ -49,23 +52,46 @@ export default function AdminMessagesPage() {
 
   const fetchLeads = async () => {
     try {
-      const response = await fetch('/api/quick-lead');
-      if (response.ok) {
-        const leads = await response.json();
+      const quickLeadResponse = await fetch('/api/quick-lead');
+      let formattedLeads: Message[] = [];
+      
+      if (quickLeadResponse.ok) {
+        const leads = await quickLeadResponse.json();
         if (leads.length > 0) {
-          const formattedLeads: Message[] = leads.map((lead: Record<string, string>) => ({
+          formattedLeads = leads.map((lead: Record<string, string>) => ({
             id: lead.id,
             name: lead.name,
             phone: lead.phone || lead.mobile,
-            city: lead.city,
+            city: lead.city || '',
             kw: lead.kw,
             date: new Date(lead.createdAt).toISOString().split('T')[0],
             read: lead.read,
             type: lead.type,
           }));
-          setMessages([...formattedLeads.reverse(), ...sampleMessages]);
         }
       }
+
+      const contactResponse = await fetch('/api/contact');
+      let contactMessages: Message[] = [];
+      
+      if (contactResponse.ok) {
+        const contacts = await contactResponse.json();
+        if (contacts.length > 0) {
+          contactMessages = contacts.map((contact: Record<string, string>) => ({
+            id: contact.id,
+            name: contact.lastName ? `${contact.name} ${contact.lastName}` : contact.name,
+            phone: contact.phone || '',
+            city: '',
+            message: contact.message,
+            date: contact.timestamp ? new Date(contact.timestamp).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            read: contact.read || false,
+            type: 'contact',
+          }));
+        }
+      }
+
+      const allMessages = [...formattedLeads.reverse(), ...contactMessages.reverse(), ...sampleMessages];
+      setMessages(allMessages);
     } catch (error) {
       console.error('Error fetching leads:', error);
     }
@@ -131,6 +157,11 @@ export default function AdminMessagesPage() {
                       Quick Lead
                     </div>
                   )}
+                  {msg.type === 'contact' && (
+                    <div className="ml-6 px-2 py-1 bg-green-100 text-green-800 text-xs rounded w-fit">
+                      Contact Form
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -142,7 +173,7 @@ export default function AdminMessagesPage() {
           {selectedMessage ? (
             <Card className="border-muted">
               <CardHeader className="flex flex-row items-start justify-between space-y-0">
-                <CardTitle>{selectedMessage.name}</CardTitle>
+                <CardTitle>{selectedMessage.name}{selectedMessage.lastName && ` ${selectedMessage.lastName}`}</CardTitle>
                 <button
                   onClick={() => setSelectedMessage(null)}
                   className="text-foreground/50 hover:text-foreground"

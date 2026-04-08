@@ -16,31 +16,29 @@ export function Header() {
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <div className="flex items-center w-24 h-10 gap-2">
+          <Link href="/" className="flex items-center w-32 h-10 gap-2">
             <Image
-              src="/mgsolarlogo.png"
+              src="/mgnewlogo.png"
               alt="MG Solar Logo"
-              width={46}
-              height={34}
-              className="h-34 w-46 rounded-full"
+              width={100}
+              height={60}
+              className="h-auto w-auto rounded-full"
+              suppressHydrationWarning
             />
-            </div>
+          </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
-            <Link href="#home" className="text-foreground hover:text-primary transition">
-              {t.nav.home}
-            </Link>
             <Link href="#services" className="text-foreground hover:text-primary transition">
               {t.nav.services}
             </Link>
-            <Link href="/projects" className="text-foreground hover:text-primary transition">
+            <Link href="#projects" className="text-foreground hover:text-primary transition">
               {t.nav.projects}
             </Link>
             <Link href="#brands" className="text-foreground hover:text-primary transition">
               {t.nav.brands}
             </Link>
-            <Link href="/careers" className="text-foreground hover:text-primary transition">
+            <Link href="#careers" className="text-foreground hover:text-primary transition">
               {t.nav.careers}
             </Link>
             <Link href="#contact" className="text-foreground hover:text-primary transition">
@@ -103,7 +101,7 @@ export function Header() {
               {t.nav.brands}
             </Link>
             <Link
-              href="/careers"
+              href="#careers"
               className="block text-foreground hover:text-primary transition"
               onClick={() => setMobileMenuOpen(false)}
             >

@@ -39,8 +39,8 @@ export const translations = {
       title: 'Trusted By Industry Leaders',
     },
     reviews: {
-      title: 'Google Reviews',
-      subtitle: 'What our customers say',
+      title: 'What Our Customers Say',
+      subtitle: 'Read testimonials from satisfied clients',
     },
     about: {
       title: 'About Us',
@@ -54,7 +54,7 @@ export const translations = {
       send: 'Send Message',
     },
     footer: {
-      company: 'Solar Energy Company',
+      company: 'MG Solar',
       rights: 'All rights reserved',
     },
   },
@@ -113,7 +113,7 @@ export const translations = {
       send: 'संदेश भेजें',
     },
     footer: {
-      company: 'सौर ऊर्जा कंपनी',
+      company: 'एमजी सोलर',
       rights: 'सर्वाधिकार सुरक्षित',
     },
   },

@@ -104,13 +104,13 @@ export function HeroSection() {
           {/* Video */}
           <div className="relative h-96 md:h-full min-h-96">
             <div className="absolute inset-0 bg-gradient-to-br from-secondary/30 to-white/10 rounded-2xl overflow-hidden">
-         <Image           
-          src="/homeheroimage.jpg"
-            alt="Hero Video"
-            layout="fill"
-            objectFit="cover"
-            className="object-cover w-full h-full rounded-2xl"
-          />
+          <Image           
+           src="/homeheroimage.jpg"
+             alt="Hero Video"
+             fill
+             className="object-cover rounded-2xl"
+             suppressHydrationWarning
+           />
             </div>
           </div>
         </div>

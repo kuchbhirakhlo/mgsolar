@@ -2,6 +2,7 @@
 
 import { useLanguage } from '@/lib/language-context';
 import { Check } from 'lucide-react';
+import Image from 'next/image';
 
 const SunIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-24 h-24 text-primary">
@@ -26,7 +27,15 @@ export function AboutSection() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           {/* Image */}
           <div className="h-96 rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
-            <SunIcon />
+          <Image
+              src="/mgnewlogo.png"
+              alt="About MG Solar"
+              width={300}
+              height={200}
+              className="rounded-2xl shadow-lg"
+              style={{ width: 'auto', height: 'auto' }}
+              suppressHydrationWarning
+            />
           </div>
 
           {/* Content */}
