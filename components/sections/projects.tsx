@@ -3,6 +3,7 @@
 import { useLanguage } from '@/lib/language-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
 
 const ResidentialIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-16 h-16 text-primary">
@@ -29,6 +30,16 @@ const SchoolIcon = () => (
   </svg>
 );
 
+interface Project {
+  id: string;
+  title: string;
+  location: string;
+  capacity: string;
+  date: string;
+  icon: React.ReactElement;
+  image: string;
+}
+
 const HotelIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-16 h-16 text-primary">
     <path d="M18 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2Z" />
@@ -42,7 +53,7 @@ const HotelIcon = () => (
   </svg>
 );
 
-const recentProjects = [
+const defaultRecentProjects: Project[] = [
   {
     id: '1',
     title: 'Residential Complex - Mumbai',
@@ -50,6 +61,7 @@ const recentProjects = [
     capacity: '250 kW',
     date: '2024',
     icon: <ResidentialIcon />,
+    image: '',
   },
   {
     id: '2',
@@ -58,6 +70,7 @@ const recentProjects = [
     capacity: '500 kW',
     date: '2024',
     icon: <FactoryIcon />,
+    image: '',
   },
   {
     id: '3',
@@ -66,6 +79,7 @@ const recentProjects = [
     capacity: '150 kW',
     date: '2023',
     icon: <SchoolIcon />,
+    image: '',
   },
   {
     id: '4',
@@ -74,11 +88,23 @@ const recentProjects = [
     capacity: '200 kW',
     date: '2023',
     icon: <HotelIcon />,
+    image: '',
   },
 ];
 
 export function ProjectsSection() {
   const { t } = useLanguage();
+  const [recentProjects, setRecentProjects] = useState<Project[]>(defaultRecentProjects);
+
+  useEffect(() => {
+    const storedProjects = localStorage.getItem('projects');
+    if (storedProjects) {
+      const parsed = JSON.parse(storedProjects);
+      // Take first 4 projects, or merge with defaults
+      const combined = [...parsed.slice(0, 4), ...defaultRecentProjects.slice(parsed.length)];
+      setRecentProjects(combined.slice(0, 4));
+    }
+  }, []);
 
   return (
     <section id="projects" className="py-20 bg-white">
@@ -91,13 +117,17 @@ export function ProjectsSection() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {recentProjects.map((project) => (
+          {recentProjects.map((project: Project) => (
             <Card
               key={project.id}
               className="overflow-hidden hover:shadow-lg hover:border-accent transition-all duration-300 group"
             >
-              <div className="h-40 bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center group-hover:bg-gradient-to-br group-hover:from-primary/30 group-hover:to-secondary/30 transition-all">
-                {project.icon}
+              <div className="h-40 bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center group-hover:bg-gradient-to-br group-hover:from-primary/30 group-hover:to-secondary/30 transition-all overflow-hidden">
+                {project.image && project.image.startsWith('http') ? (
+                  <img src={project.image} alt={project.title} className="w-full h-full object-cover" />
+                ) : (
+                  project.icon
+                )}
               </div>
               <CardHeader>
                 <CardTitle className="text-lg text-primary">{project.title}</CardTitle>

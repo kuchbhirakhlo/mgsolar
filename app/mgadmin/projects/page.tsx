@@ -2,8 +2,10 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
-import { Edit2, Trash2, Plus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Edit2, Trash2, Plus, Upload, Loader2 } from 'lucide-react';
+import { useFormSubmit } from '@/hooks/use-form-submit';
 
 const initialProjects = [
   {
@@ -12,6 +14,7 @@ const initialProjects = [
     location: 'Mumbai, Maharashtra',
     capacity: '250 kW',
     date: '2024',
+    image: '',
   },
   {
     id: '2',
@@ -19,18 +22,38 @@ const initialProjects = [
     location: 'Pune, Maharashtra',
     capacity: '500 kW',
     date: '2024',
+    image: '',
   },
 ];
 
 export default function AdminProjectsPage() {
+  const router = useRouter();
+  const [isEmployee, setIsEmployee] = useState(false);
   const [projects, setProjects] = useState(initialProjects);
   const [showForm, setShowForm] = useState(false);
+  const [editingProject, setEditingProject] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     location: '',
     capacity: '',
     date: new Date().getFullYear().toString(),
+    image: '',
   });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const { isLoading, submitForm } = useFormSubmit();
+
+  useEffect(() => {
+    const employeeData = sessionStorage.getItem('employeeData');
+    if (employeeData) {
+      setIsEmployee(true);
+    }
+    // Load projects from localStorage
+    const storedProjects = localStorage.getItem('projects');
+    if (storedProjects) {
+      setProjects(JSON.parse(storedProjects));
+    }
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -39,21 +62,98 @@ export default function AdminProjectsPage() {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (formData.title && formData.location && formData.capacity) {
-      const newProject = {
-        id: Date.now().toString(),
-        ...formData,
-      };
-      setProjects([newProject, ...projects]);
-      setFormData({ title: '', location: '', capacity: '', date: new Date().getFullYear().toString() });
-      setShowForm(false);
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setUploading(true);
+
+      try {
+        const formDataUpload = new FormData();
+        formDataUpload.append('file', file);
+
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formDataUpload,
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          setFormData({
+            ...formData,
+            image: result.url,
+          });
+        } else {
+          alert('Upload failed: ' + result.error);
+        }
+      } catch (error) {
+        alert('Upload failed: ' + error);
+      } finally {
+        setUploading(false);
+      }
     }
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const submitProject = async () => {
+      if (editingProject) {
+        // Update existing project
+        const updatedProjects = projects.map(project =>
+          project.id === editingProject ? { ...project, ...formData } : project
+        );
+        setProjects(updatedProjects);
+        localStorage.setItem('projects', JSON.stringify(updatedProjects));
+      } else {
+        // Add new project
+        const newProject = {
+          id: Date.now().toString(),
+          ...formData,
+        };
+        const updatedProjects = [newProject, ...projects];
+        setProjects(updatedProjects);
+        localStorage.setItem('projects', JSON.stringify(updatedProjects));
+      }
+
+      setFormData({ title: '', location: '', capacity: '', date: new Date().getFullYear().toString(), image: '' });
+      setSelectedFile(null);
+      setShowForm(false);
+      setEditingProject(null);
+    };
+
+    if (formData.title && formData.location && formData.capacity) {
+      submitForm(
+        submitProject,
+        editingProject ? 'Project updated successfully!' : 'Project added successfully!'
+      );
+    }
+  };
+
+  const handleEdit = (project: any) => {
+    setFormData({
+      title: project.title,
+      location: project.location,
+      capacity: project.capacity,
+      date: project.date,
+      image: project.image,
+    });
+    setEditingProject(project.id);
+    setShowForm(true);
+  };
+
+  const handleCancel = () => {
+    setShowForm(false);
+    setEditingProject(null);
+    setFormData({ title: '', location: '', capacity: '', date: new Date().getFullYear().toString(), image: '' });
+    setSelectedFile(null);
+  };
+
   const handleDelete = (id: string) => {
-    setProjects(projects.filter((p) => p.id !== id));
+    const updatedProjects = projects.filter((p) => p.id !== id);
+    setProjects(updatedProjects);
+    localStorage.setItem('projects', JSON.stringify(updatedProjects));
   };
 
   return (
@@ -63,19 +163,25 @@ export default function AdminProjectsPage() {
           <h1 className="text-4xl font-bold text-primary mb-2">Projects</h1>
           <p className="text-foreground/70">Manage solar installation projects</p>
         </div>
-        <Button
-          onClick={() => setShowForm(!showForm)}
-          className="bg-secondary text-secondary-foreground hover:bg-secondary/90 gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Add Project
-        </Button>
+        {!isEmployee && (
+          <Button
+            onClick={() => {
+              setEditingProject(null);
+              setFormData({ title: '', location: '', capacity: '', date: new Date().getFullYear().toString(), image: '' });
+              setShowForm(!showForm);
+            }}
+            className="bg-secondary text-secondary-foreground hover:bg-secondary/90 gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Add Project
+          </Button>
+        )}
       </div>
 
       {showForm && (
         <Card className="border-muted">
           <CardHeader>
-            <CardTitle>New Project</CardTitle>
+            <CardTitle>{editingProject ? 'Edit Project' : 'New Project'}</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -114,13 +220,49 @@ export default function AdminProjectsPage() {
                 onChange={handleChange}
                 className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-accent"
               />
+              <input
+                type="url"
+                name="image"
+                placeholder="Image URL (optional)"
+                value={formData.image}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-accent"
+              />
+              <div className="space-y-2">
+                <label className="block text-sm font-medium">Project Image</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  disabled={uploading}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-accent disabled:opacity-50"
+                />
+                {uploading && (
+                  <p className="text-sm text-blue-600 flex items-center gap-2">
+                    <Upload className="w-4 h-4 animate-pulse" />
+                    Uploading...
+                  </p>
+                )}
+                {formData.image && (
+                  <div className="mt-2">
+                    <img src={formData.image} alt="Preview" className="w-32 h-20 object-cover rounded" />
+                  </div>
+                )}
+              </div>
               <div className="flex gap-4">
-                <Button type="submit" className="bg-primary hover:bg-primary/90">
-                  Save Project
+                <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={uploading || isLoading}>
+                  {(uploading || isLoading) ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      {editingProject ? 'Updating...' : 'Saving...'}
+                    </>
+                  ) : (
+                    editingProject ? 'Update Project' : 'Save Project'
+                  )}
                 </Button>
                 <Button
                   type="button"
-                  onClick={() => setShowForm(false)}
+                  onClick={handleCancel}
                   variant="outline"
                 >
                   Cancel
@@ -151,19 +293,27 @@ export default function AdminProjectsPage() {
                 <span>{project.date}</span>
               </div>
               <div className="flex gap-2 pt-4">
-                <Button size="sm" variant="outline" className="gap-2">
-                  <Edit2 className="w-4 h-4" />
-                  Edit
-                </Button>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="text-destructive gap-2"
-                  onClick={() => handleDelete(project.id)}
+                  className="gap-2"
+                  onClick={() => handleEdit(project)}
+                  disabled={isEmployee}
                 >
-                  <Trash2 className="w-4 h-4" />
-                  Delete
+                  <Edit2 className="w-4 h-4" />
+                  Edit
                 </Button>
+                {!isEmployee && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-destructive gap-2"
+                    onClick={() => handleDelete(project.id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

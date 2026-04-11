@@ -42,3 +42,13 @@ export interface CareerApplication {
   message: string;
   timestamp?: any;
 }
+
+export interface Employee {
+  id?: string;
+  mobileNumber: string;
+  name: string;
+  password: string;
+  empId: string;
+  isBlocked: boolean;
+  createdAt?: any;
+}

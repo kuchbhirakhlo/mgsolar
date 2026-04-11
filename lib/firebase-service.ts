@@ -11,7 +11,7 @@ import {
   orderBy,
 } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
-import type { Project, Brand, ContactMessage, CareerApplication } from './types'
+import type { Project, Brand, ContactMessage, CareerApplication, Employee } from './types'
 
 // Projects
 export async function addProject(project: Omit<Project, 'id'>) {
@@ -124,4 +124,38 @@ export async function deleteFile(fileUrl: string) {
   } catch (error) {
     console.error('Error deleting file:', error)
   }
+}
+
+// Employees
+export async function addEmployee(employee: Omit<Employee, 'id'>) {
+  const docRef = await addDoc(collection(db, 'employees'), {
+    ...employee,
+    createdAt: new Date(),
+  })
+  return docRef.id
+}
+
+export async function getEmployees() {
+  const q = query(collection(db, 'employees'), orderBy('createdAt', 'desc'))
+  const querySnapshot = await getDocs(q)
+  return querySnapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as (Employee & { id: string })[]
+}
+
+export async function getEmployeeByEmpId(empId: string): Promise<(Employee & { id: string }) | null> {
+  const q = query(collection(db, 'employees'), where('empId', '==', empId))
+  const querySnapshot = await getDocs(q)
+  if (querySnapshot.empty) return null
+  const doc = querySnapshot.docs[0]
+  return { id: doc.id, ...doc.data() } as Employee & { id: string }
+}
+
+export async function updateEmployee(id: string, employee: Partial<Employee>) {
+  await updateDoc(doc(db, 'employees', id), employee)
+}
+
+export async function blockEmployee(id: string, isBlocked: boolean) {
+  await updateDoc(doc(db, 'employees', id), { isBlocked })
 }

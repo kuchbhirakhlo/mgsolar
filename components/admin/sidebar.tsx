@@ -2,21 +2,39 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, FolderOpen, MessageSquare, LogOut } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, MessageSquare, LogOut, Users, UserPlus, Wrench } from 'lucide-react';
 
-const navItems = [
+const adminNavItems = [
   { href: '/mgadmin', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/mgadmin/customers', label: 'Customers', icon: UserPlus },
+  { href: '/mgadmin/installations', label: 'Installations', icon: Wrench },
+  { href: '/mgadmin/projects', label: 'Projects', icon: FolderOpen },
+  { href: '/mgadmin/messages', label: 'Messages', icon: MessageSquare },
+  { href: '/mgadmin/employees', label: 'Employees', icon: Users },
+];
+
+const employeeNavItems = [
+  { href: '/mgadmin', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/mgadmin/customers', label: 'Customers', icon: UserPlus },
+  { href: '/mgadmin/installations', label: 'Installations', icon: Wrench },
   { href: '/mgadmin/projects', label: 'Projects', icon: FolderOpen },
   { href: '/mgadmin/messages', label: 'Messages', icon: MessageSquare },
 ];
 
-export function AdminSidebar() {
+interface AdminSidebarProps {
+  isEmployee?: boolean;
+}
+
+export function AdminSidebar({ isEmployee = false }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const navItems = isEmployee ? employeeNavItems : adminNavItems;
 
   const handleLogout = () => {
     sessionStorage.removeItem('adminLoggedIn');
-    router.push('/admin-login');
+    sessionStorage.removeItem('employeeLoggedIn');
+    sessionStorage.removeItem('employeeData');
+    router.push(isEmployee ? '/employee-login' : '/admin-login');
   };
 
   return (

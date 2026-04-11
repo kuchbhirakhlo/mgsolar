@@ -26,14 +26,13 @@ export function AboutSection() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           {/* Image */}
-          <div className="h-96 rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
-          <Image
+          <div className="h-64 md:h-96 rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+            <Image
               src="/mgnewlogo.png"
               alt="About MG Solar"
-              width={300}
-              height={200}
-              className="rounded-2xl shadow-lg"
-              style={{ width: 'auto', height: 'auto' }}
+              width={200}
+              height={100}
+              className="rounded-2xl shadow-lg max-w-auto h-auto"
               suppressHydrationWarning
             />
           </div>

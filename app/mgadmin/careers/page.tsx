@@ -1,16 +1,24 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { getCareerApplications } from '@/lib/firebase-service'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import type { CareerApplication } from '@/lib/types'
 
 export default function AdminCareersPage() {
+  const router = useRouter()
   const [applications, setApplications] = useState<(CareerApplication & { id: string })[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    const employeeData = sessionStorage.getItem('employeeData');
+    if (employeeData) {
+      router.push('/mgadmin');
+      return;
+    }
+    
     const loadApplications = async () => {
       try {
         const data = await getCareerApplications()
@@ -23,7 +31,7 @@ export default function AdminCareersPage() {
     }
 
     loadApplications()
-  }, [])
+  }, [router]);
 
   return (
     <div className="space-y-6">
@@ -57,19 +65,19 @@ export default function AdminCareersPage() {
                     </span>
                   </div>
                   <p className="text-sm">{app.message}</p>
-                  {app.resumeUrl && (
+                  {app.resume && (
                     <div>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => window.open(app.resumeUrl, '_blank')}
+                        onClick={() => window.open(app.resume, '_blank')}
                       >
                         View Resume
                       </Button>
                     </div>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    Applied: {new Date(app.createdAt).toLocaleDateString()}
+                    Applied: {new Date(app.timestamp).toLocaleDateString()}
                   </p>
                 </div>
               </Card>

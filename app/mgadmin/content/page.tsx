@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useLanguage } from '@/lib/hooks'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -15,6 +16,7 @@ const contentSections = [
 ]
 
 export default function AdminContentPage() {
+  const router = useRouter()
   const { language } = useLanguage()
   const [selectedSection, setSelectedSection] = useState('hero')
   const [content, setContent] = useState({
@@ -22,6 +24,13 @@ export default function AdminContentPage() {
     hi: '',
   })
   const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    const employeeData = sessionStorage.getItem('employeeData');
+    if (employeeData) {
+      router.push('/mgadmin');
+    }
+  }, [router]);
 
   const handleSave = () => {
     // In a real app, this would save to Firebase

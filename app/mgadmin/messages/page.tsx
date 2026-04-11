@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Mail, Phone, User, X, MapPin, Zap } from 'lucide-react';
 
 interface Message {
@@ -42,11 +43,17 @@ const sampleMessages: Message[] = [
 ];
 
 export default function AdminMessagesPage() {
+  const router = useRouter();
+  const [isEmployee, setIsEmployee] = useState(false);
   const [messages, setMessages] = useState<Message[]>(sampleMessages);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const employeeData = sessionStorage.getItem('employeeData');
+    if (employeeData) {
+      setIsEmployee(true);
+    }
     fetchLeads();
   }, []);
 
@@ -227,12 +234,14 @@ export default function AdminMessagesPage() {
                 )}
 
                 <div className="flex gap-2 pt-4 border-t">
-                  <button
-                    onClick={() => handleDelete(selectedMessage.id)}
-                    className="px-4 py-2 bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 transition"
-                  >
-                    Delete
-                  </button>
+                  {!isEmployee && (
+                    <button
+                      onClick={() => handleDelete(selectedMessage.id)}
+                      className="px-4 py-2 bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 transition"
+                    >
+                      Delete
+                    </button>
+                  )}
                   <a
                     href={`tel:${selectedMessage.phone}`}
                     className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition"
