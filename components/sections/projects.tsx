@@ -4,6 +4,8 @@ import { useLanguage } from '@/lib/language-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot, QuerySnapshot, DocumentData } from 'firebase/firestore';
 
 const ResidentialIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-16 h-16 text-primary">
@@ -36,7 +38,7 @@ interface Project {
   location: string;
   capacity: string;
   date: string;
-  icon: React.ReactElement;
+  icon?: React.ReactElement;
   image: string;
 }
 
@@ -52,6 +54,22 @@ const HotelIcon = () => (
     <path d="M12 11h.01" />
   </svg>
 );
+
+// Function to assign icons based on project title
+const getProjectIcon = (title: string): React.ReactElement => {
+  const lowerTitle = title.toLowerCase();
+  if (lowerTitle.includes('residential') || lowerTitle.includes('complex') || lowerTitle.includes('home')) {
+    return <ResidentialIcon />;
+  } else if (lowerTitle.includes('factory') || lowerTitle.includes('industrial') || lowerTitle.includes('commercial')) {
+    return <FactoryIcon />;
+  } else if (lowerTitle.includes('school') || lowerTitle.includes('campus') || lowerTitle.includes('education')) {
+    return <SchoolIcon />;
+  } else if (lowerTitle.includes('hotel') || lowerTitle.includes('hospital')) {
+    return <HotelIcon />;
+  } else {
+    return <ResidentialIcon />; // Default icon
+  }
+};
 
 const defaultRecentProjects: Project[] = [
   {
@@ -97,13 +115,26 @@ export function ProjectsSection() {
   const [recentProjects, setRecentProjects] = useState<Project[]>(defaultRecentProjects);
 
   useEffect(() => {
-    const storedProjects = localStorage.getItem('projects');
-    if (storedProjects) {
-      const parsed = JSON.parse(storedProjects);
-      // Take first 4 projects, or merge with defaults
-      const combined = [...parsed.slice(0, 4), ...defaultRecentProjects.slice(parsed.length)];
+    // Load projects from Firebase
+    const projectsRef = collection(db, 'projects');
+    const unsubscribe = onSnapshot(projectsRef, (snapshot: QuerySnapshot<DocumentData>) => {
+      const firebaseProjects = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Omit<Project, 'icon'>[];
+
+      // Assign icons to Firebase projects
+      const projectsWithIcons = firebaseProjects.map(project => ({
+        ...project,
+        icon: getProjectIcon(project.title)
+      }));
+
+      // Take first 4 projects, or merge with defaults if fewer than 4
+      const combined = [...projectsWithIcons.slice(0, 4), ...defaultRecentProjects.slice(projectsWithIcons.length)];
       setRecentProjects(combined.slice(0, 4));
-    }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   return (
@@ -126,7 +157,7 @@ export function ProjectsSection() {
                 {project.image && project.image.startsWith('http') ? (
                   <img src={project.image} alt={project.title} className="w-full h-full object-cover" />
                 ) : (
-                  project.icon
+                  project.icon!
                 )}
               </div>
               <CardHeader>

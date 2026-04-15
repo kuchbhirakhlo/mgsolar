@@ -1,35 +1,76 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart3, Mail, FolderOpen, Users } from 'lucide-react';
+import { BarChart3, Mail, FolderOpen, Users, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+
+interface DashboardStats {
+  totalProjects: number;
+  totalTeamMembers: number;
+  newMessages: number;
+  totalCapacity: number;
+}
 
 export default function AdminDashboard() {
-  const stats = [
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchDashboardData();
+
+    // Set up real-time updates every 30 seconds
+    const interval = setInterval(fetchDashboardData, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch('/api/dashboard');
+      const data = await response.json();
+
+      if (data.success) {
+        setStats(data.data);
+      } else {
+        setError('Failed to load dashboard data');
+      }
+    } catch (err) {
+      setError('Failed to load dashboard data');
+      console.error('Dashboard fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const statCards = [
     {
       icon: FolderOpen,
       label: 'Total Projects',
-      value: '6',
+      value: stats?.totalProjects?.toString() || '0',
       color: 'bg-blue-100',
       textColor: 'text-blue-600',
     },
     {
       icon: Users,
       label: 'Team Members',
-      value: '12',
+      value: stats?.totalTeamMembers?.toString() || '0',
       color: 'bg-green-100',
       textColor: 'text-green-600',
     },
     {
       icon: Mail,
       label: 'New Messages',
-      value: '5',
+      value: stats?.newMessages?.toString() || '0',
       color: 'bg-yellow-100',
       textColor: 'text-yellow-600',
     },
     {
       icon: BarChart3,
       label: 'Total Capacity (MW)',
-      value: '1.8',
+      value: stats?.totalCapacity?.toString() || '0',
       color: 'bg-purple-100',
       textColor: 'text-purple-600',
     },
@@ -42,19 +83,33 @@ export default function AdminDashboard() {
         <p className="text-foreground/70">Welcome back! Here&apos;s your business overview.</p>
       </div>
 
+      {error && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="pt-6">
+            <p className="text-red-600">{error}</p>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat) => {
+        {statCards.map((stat) => {
           const Icon = stat.icon;
           return (
             <Card key={stat.label} className="border-muted">
               <CardHeader className="flex flex-row items-center justify-between space-y-0">
                 <CardTitle className="text-sm font-medium">{stat.label}</CardTitle>
                 <div className={`${stat.color} p-2 rounded-lg`}>
-                  <Icon className={`w-4 h-4 ${stat.textColor}`} />
+                  {loading ? (
+                    <Loader2 className={`w-4 h-4 ${stat.textColor} animate-spin`} />
+                  ) : (
+                    <Icon className={`w-4 h-4 ${stat.textColor}`} />
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-primary">{stat.value}</div>
+                <div className="text-2xl font-bold text-primary">
+                  {loading ? '...' : stat.value}
+                </div>
               </CardContent>
             </Card>
           );

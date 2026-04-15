@@ -47,8 +47,50 @@ export interface Employee {
   id?: string;
   mobileNumber: string;
   name: string;
+  email?: string;
   password: string;
   empId: string;
+  role: 'employee' | 'installer';
   isBlocked: boolean;
+  firebaseUid?: string;
   createdAt?: any;
+}
+
+export interface Customer {
+  id: string;
+  systemType: string;
+  customerName: string;
+  address: string;
+  pincode: string;
+  aadharCard: string;
+  panCard: string;
+  mobileNumber: string;
+  electricityBillNumber: string;
+  kilowatt: string;
+  panelCompanyName: string;
+  inverterCompanyName: string;
+  referredBy: string;
+  bankAccountNumber: string;
+  bankIfscCode: string;
+  bankName: string;
+  bankAddress: string;
+  quotationPrice: string;
+  dealPrice: string;
+  wireType: string;
+  acWireBrand?: string;
+  dcWireBrand?: string;
+  createdBy?: string;
+}
+
+export interface Payment {
+  id: string;
+  customerId: string;
+  projectCost: string;
+  firstPayment: string;
+  secondPayment: string;
+  thirdPayment: string;
+  modeOfPayment: string;
+  transactionId: string;
+  notes: string;
+  createdAt: string;
 }

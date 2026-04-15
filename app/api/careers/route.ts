@@ -1,6 +1,23 @@
 import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { NextRequest, NextResponse } from 'next/server';
+
+export async function GET() {
+  try {
+    const querySnapshot = await getDocs(collection(db, 'careers'));
+    const jobs = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    return NextResponse.json(jobs);
+  } catch (error) {
+    console.error('Error fetching careers:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch careers' },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {

@@ -9,13 +9,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Eye, Edit2, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Eye, Edit2, Trash2, Loader2, Download } from 'lucide-react';
 import { useFormSubmit } from '@/hooks/use-form-submit';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot, QuerySnapshot, DocumentData } from 'firebase/firestore';
 
 interface Customer {
   id: string;
+  systemType: string;
   customerName: string;
   address: string;
+  pincode: string;
+  aadharCard: string;
+  panCard: string;
   mobileNumber: string;
   electricityBillNumber: string;
   kilowatt: string;
@@ -31,11 +37,36 @@ interface Customer {
   wireType: string;
   acWireBrand?: string;
   dcWireBrand?: string;
+  createdBy?: string; // Employee ID who created this customer
 }
+
+const MIN_QUOTATION_PRICES: Record<string, Record<string, number>> = {
+  'on grid': {
+    '3kw': 175000,
+    '4kw': 225000,
+    '5kw': 270000,
+    '6kw': 335000,
+    '7kw': 360000,
+    '8kw': 430000,
+    '9kw': 470000,
+    '10kw': 520000,
+  },
+  'hybrid': {
+    '3kw': 245000,
+    '4kw': 350000,
+    '5kw': 375000,
+    '6kw': 450000,
+    '7kw': 525000,
+    '8kw': 600000,
+    '9kw': 675000,
+    '10kw': 750000,
+  },
+};
 
 export default function AdminCustomersPage() {
   const router = useRouter();
   const [isEmployee, setIsEmployee] = useState(false);
+  const [employeeData, setEmployeeData] = useState<any>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -43,8 +74,12 @@ export default function AdminCustomersPage() {
   const [viewDialog, setViewDialog] = useState(false);
   const { isLoading, submitForm } = useFormSubmit();
   const [formData, setFormData] = useState({
+    systemType: '',
     customerName: '',
     address: '',
+    pincode: '',
+    aadharCard: '',
+    panCard: '',
     mobileNumber: '',
     electricityBillNumber: '',
     kilowatt: '',
@@ -63,16 +98,44 @@ export default function AdminCustomersPage() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+
+
   useEffect(() => {
-    const employeeData = sessionStorage.getItem('employeeData');
-    if (employeeData) {
+    const employeeDataStr = sessionStorage.getItem('employeeData');
+    if (employeeDataStr) {
+      const empData = JSON.parse(employeeDataStr);
       setIsEmployee(true);
+      setEmployeeData(empData);
     }
-    // Load customers from localStorage or API
-    const savedCustomers = localStorage.getItem('customers');
-    if (savedCustomers) {
-      setCustomers(JSON.parse(savedCustomers));
+
+    // Load customers based on role
+    let unsubscribe: () => void;
+
+    if (!employeeDataStr) {
+      // Admin: load all customers
+      const customersRef = collection(db, 'customers');
+      unsubscribe = onSnapshot(customersRef, (snapshot: QuerySnapshot<DocumentData>) => {
+        const customersData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Customer[];
+        setCustomers(customersData);
+      });
+    } else {
+      // Employee: load only customers created by this employee
+      const empData = JSON.parse(employeeDataStr);
+      const customersRef = collection(db, 'customers');
+      const q = query(customersRef, where('createdBy', '==', empData.empId));
+      unsubscribe = onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
+        const customersData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Customer[];
+        setCustomers(customersData);
+      });
     }
+
+    return () => unsubscribe();
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -92,7 +155,7 @@ export default function AdminCustomersPage() {
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     const requiredFields = [
-      'customerName', 'address', 'mobileNumber', 'electricityBillNumber',
+      'systemType', 'customerName', 'address', 'pincode', 'aadharCard', 'mobileNumber', 'electricityBillNumber',
       'kilowatt', 'panelCompanyName', 'inverterCompanyName', 'referredBy'
     ];
 
@@ -102,6 +165,14 @@ export default function AdminCustomersPage() {
       }
     });
 
+    // Check minimum quotation price if system type and KW are selected
+    if (formData.systemType && formData.kilowatt && formData.quotationPrice) {
+      const minPrice = MIN_QUOTATION_PRICES[formData.systemType]?.[formData.kilowatt];
+      if (minPrice && parseFloat(formData.quotationPrice) < minPrice) {
+        newErrors.quotationPrice = `Quotation price must be at least ₹${minPrice.toLocaleString()}`;
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -109,8 +180,12 @@ export default function AdminCustomersPage() {
   const handleEdit = (customer: Customer) => {
     setSelectedCustomer(customer);
     setFormData({
+      systemType: customer.systemType || '',
       customerName: customer.customerName,
       address: customer.address,
+      pincode: customer.pincode || '',
+      aadharCard: customer.aadharCard || '',
+      panCard: customer.panCard || '',
       mobileNumber: customer.mobileNumber,
       electricityBillNumber: customer.electricityBillNumber,
       kilowatt: customer.kilowatt,
@@ -131,11 +206,15 @@ export default function AdminCustomersPage() {
     setShowForm(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this customer?')) {
-      const updatedCustomers = customers.filter(c => c.id !== id);
-      setCustomers(updatedCustomers);
-      localStorage.setItem('customers', JSON.stringify(updatedCustomers));
+      try {
+        await deleteDoc(doc(db, 'customers', id));
+        // Firestore onSnapshot will update the state automatically
+      } catch (error) {
+        console.error('Error deleting customer:', error);
+        alert('Error deleting customer');
+      }
     }
   };
 
@@ -144,73 +223,195 @@ export default function AdminCustomersPage() {
     setViewDialog(true);
   };
 
+
+
+  const downloadCustomersData = () => {
+    // Create HTML content for PDF
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Customer Data Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1 { color: #2563eb; text-align: center; margin-bottom: 30px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            .header-info { text-align: center; margin-bottom: 20px; }
+            .header-info p { margin: 5px 0; }
+            @media print { body { margin: 0; } }
+          </style>
+        </head>
+        <body>
+          <div class="header-info">
+            <h1>MG Solar - Customer Data Report</h1>
+            <p>Generated on: ${new Date().toLocaleDateString()}</p>
+            <p>Total Customers: ${customers.length}</p>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>System Type</th>
+                <th>Customer Name</th>
+                <th>Mobile</th>
+                <th>Address</th>
+                <th>Pincode</th>
+                <th>Kilowatt</th>
+                <th>Panel Company</th>
+                <th>Inverter Company</th>
+                <th>Quotation Price</th>
+                <th>Deal Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${customers.map(customer => `
+                <tr>
+                  <td>${customer.systemType || ''}</td>
+                  <td>${customer.customerName || ''}</td>
+                  <td>${customer.mobileNumber || ''}</td>
+                  <td>${customer.address || ''}</td>
+                  <td>${customer.pincode || ''}</td>
+                  <td>${customer.kilowatt || ''} kW</td>
+                  <td>${customer.panelCompanyName || ''}</td>
+                  <td>${customer.inverterCompanyName || ''}</td>
+                  <td>${customer.quotationPrice ? '₹' + customer.quotationPrice : ''}</td>
+                  <td>${customer.dealPrice ? '₹' + customer.dealPrice : ''}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    // Create blob and download as HTML file (user can print to PDF)
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'customers_data.html');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Optionally open print dialog for PDF generation
+    setTimeout(() => {
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+        printWindow.print();
+      }
+    }, 500);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Form submission started');
+    console.log('Form data:', formData);
+
+    // Check validation first
+    const isValid = validateForm();
+    console.log('Form validation result:', isValid);
+    console.log('Validation errors:', errors);
+
+    if (!isValid) {
+      console.log('Form validation failed, not submitting');
+      return;
+    }
 
     const submitCustomer = async () => {
-      if (isEditing && selectedCustomer) {
-        const updatedCustomers = customers.map(c => c.id === selectedCustomer.id ? { ...formData, id: selectedCustomer.id } : c);
-        setCustomers(updatedCustomers);
-        localStorage.setItem('customers', JSON.stringify(updatedCustomers));
-      } else {
-        const newCustomer: Customer = {
-          id: Date.now().toString(),
-          ...formData,
-        };
-        const updatedCustomers = [newCustomer, ...customers];
-        setCustomers(updatedCustomers);
-        localStorage.setItem('customers', JSON.stringify(updatedCustomers));
-      }
+      try {
+        console.log('Starting customer submission...');
+        if (isEditing && selectedCustomer) {
+          console.log('Updating existing customer:', selectedCustomer.id);
+          // Update existing customer
+          const customerRef = doc(db, 'customers', selectedCustomer.id);
+          await updateDoc(customerRef, formData);
+          console.log('Customer updated successfully');
+        } else {
+          console.log('Adding new customer');
+          // Add new customer
+          const newCustomerData = {
+            ...formData,
+            ...(employeeData?.empId && { createdBy: employeeData.empId }),
+          };
+          console.log('New customer data:', newCustomerData);
+          const docRef = await addDoc(collection(db, 'customers'), newCustomerData);
+          console.log('Customer added successfully with ID:', docRef.id);
+        }
 
-      setFormData({
-        customerName: '',
-        address: '',
-        mobileNumber: '',
-        electricityBillNumber: '',
-        kilowatt: '',
-        panelCompanyName: '',
-        inverterCompanyName: '',
-        referredBy: '',
-        bankAccountNumber: '',
-        bankIfscCode: '',
-        bankName: '',
-        bankAddress: '',
-        quotationPrice: '',
-        dealPrice: '',
-        wireType: '',
-        acWireBrand: '',
-        dcWireBrand: '',
-      });
-      setShowForm(false);
-      setIsEditing(false);
-      setSelectedCustomer(null);
-      setErrors({});
+        // Reset form
+        setFormData({
+          systemType: '',
+          customerName: '',
+          address: '',
+          pincode: '',
+          aadharCard: '',
+          panCard: '',
+          mobileNumber: '',
+          electricityBillNumber: '',
+          kilowatt: '',
+          panelCompanyName: '',
+          inverterCompanyName: '',
+          referredBy: '',
+          bankAccountNumber: '',
+          bankIfscCode: '',
+          bankName: '',
+          bankAddress: '',
+          quotationPrice: '',
+          dealPrice: '',
+          wireType: '',
+          acWireBrand: '',
+          dcWireBrand: '',
+        });
+        setShowForm(false);
+        setIsEditing(false);
+        setSelectedCustomer(null);
+        setErrors({});
+        console.log('Form reset completed');
+      } catch (error) {
+        console.error('Error in submitCustomer:', error);
+        throw error; // Re-throw to be caught by useFormSubmit
+      }
     };
 
-    if (validateForm()) {
-      submitForm(
-        submitCustomer,
-        isEditing ? 'Customer updated successfully!' : 'Customer added successfully!'
-      );
-    }
+    console.log('Calling submitForm...');
+    submitForm(
+      submitCustomer,
+      isEditing ? 'Customer updated successfully!' : 'Customer added successfully!'
+    );
   };
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold text-primary mb-2">Customers</h1>
-          <p className="text-foreground/70">Manage customer information</p>
+          <h1 className="text-2xl lg:text-4xl font-bold text-primary mb-1 lg:mb-2">Customers</h1>
+          <p className="text-foreground/70 text-sm lg:text-base">Manage customer information</p>
         </div>
-        {!isEmployee && (
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button
+            onClick={downloadCustomersData}
+            variant="outline"
+            className="gap-2 justify-center"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Download Report</span>
+            <span className="sm:hidden">Report</span>
+          </Button>
           <Button
             onClick={() => setShowForm(!showForm)}
-            className="bg-secondary text-secondary-foreground hover:bg-secondary/90 gap-2"
+            className="bg-secondary text-secondary-foreground hover:bg-secondary/90 gap-2 justify-center"
           >
             <Plus className="w-4 h-4" />
-            Add Customer
+            <span className="hidden sm:inline">Add Customer</span>
+            <span className="sm:hidden">Add</span>
           </Button>
-        )}
+        </div>
       </div>
 
       {showForm && (
@@ -218,11 +419,66 @@ export default function AdminCustomersPage() {
           <CardHeader>
             <CardTitle>{isEditing ? 'Edit Customer' : 'New Customer'}</CardTitle>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="border-b pb-4">
+                  <h3 className="text-lg font-semibold mb-4">System Configuration</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="systemType">System Type <span className="text-red-500">*</span></Label>
+                      <Select value={formData.systemType} onValueChange={(value) => handleSelectChange('systemType', value)}>
+                        <SelectTrigger className={errors.systemType ? 'border-red-500' : ''}>
+                          <SelectValue placeholder="Select system type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="on grid">On Grid</SelectItem>
+                          <SelectItem value="hybrid">Hybrid</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {errors.systemType && <p className="text-red-500 text-sm">{errors.systemType}</p>}
+                    </div>
+                    <div>
+                      <Label htmlFor="kilowatt">Kilowatt (kW) <span className="text-red-500">*</span></Label>
+                      <Select value={formData.kilowatt} onValueChange={(value) => handleSelectChange('kilowatt', value)} disabled={!formData.systemType}>
+                        <SelectTrigger className={errors.kilowatt ? 'border-red-500' : ''}>
+                          <SelectValue placeholder={formData.systemType ? "Select KW" : "Select system type first"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="3kw">3kw</SelectItem>
+                          <SelectItem value="4kw">4kw</SelectItem>
+                          <SelectItem value="5kw">5kw</SelectItem>
+                          <SelectItem value="6kw">6kw</SelectItem>
+                          <SelectItem value="7kw">7kw</SelectItem>
+                          <SelectItem value="8kw">8kw</SelectItem>
+                          <SelectItem value="9kw">9kw</SelectItem>
+                          <SelectItem value="10kw">10kw</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {errors.kilowatt && <p className="text-red-500 text-sm">{errors.kilowatt}</p>}
+                    </div>
+                    <div>
+                      <Label htmlFor="panelCompanyName">Panel Company Name <span className="text-red-500">*</span></Label>
+                      <Select value={formData.panelCompanyName} onValueChange={(value) => handleSelectChange('panelCompanyName', value)} disabled={!formData.systemType}>
+                        <SelectTrigger className={errors.panelCompanyName ? 'border-red-500' : ''}>
+                          <SelectValue placeholder={formData.systemType ? "Select panel company" : "Select system type first"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Premier Energies">Premier Energies</SelectItem>
+                          <SelectItem value="Adani Solar">Adani Solar</SelectItem>
+                          <SelectItem value="Utl Fujiyama">Utl Fujiyama</SelectItem>
+                          <SelectItem value="Vikram Solar">Vikram Solar</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {errors.panelCompanyName && <p className="text-red-500 text-sm">{errors.panelCompanyName}</p>}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-b pb-4">
+                  <h3 className="text-lg font-semibold mb-4">Personal Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="customerName">Customer Name *</Label>
+                  <Label htmlFor="customerName">Customer Name <span className="text-red-500">*</span></Label>
                   <Input
                     id="customerName"
                     name="customerName"
@@ -233,7 +489,7 @@ export default function AdminCustomersPage() {
                   {errors.customerName && <p className="text-red-500 text-sm">{errors.customerName}</p>}
                 </div>
                 <div>
-                  <Label htmlFor="mobileNumber">Mobile Number *</Label>
+                  <Label htmlFor="mobileNumber">Mobile Number <span className="text-red-500">*</span></Label>
                   <Input
                     id="mobileNumber"
                     name="mobileNumber"
@@ -244,7 +500,7 @@ export default function AdminCustomersPage() {
                   {errors.mobileNumber && <p className="text-red-500 text-sm">{errors.mobileNumber}</p>}
                 </div>
                 <div className="md:col-span-2">
-                  <Label htmlFor="address">Address *</Label>
+                  <Label htmlFor="address">Address <span className="text-red-500">*</span></Label>
                   <Input
                     id="address"
                     name="address"
@@ -255,7 +511,38 @@ export default function AdminCustomersPage() {
                   {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>}
                 </div>
                 <div>
-                  <Label htmlFor="electricityBillNumber">Electricity Bill Number *</Label>
+                  <Label htmlFor="pincode">Pincode <span className="text-red-500">*</span></Label>
+                  <Input
+                    id="pincode"
+                    name="pincode"
+                    value={formData.pincode}
+                    onChange={handleChange}
+                    className={errors.pincode ? 'border-red-500' : ''}
+                  />
+                  {errors.pincode && <p className="text-red-500 text-sm">{errors.pincode}</p>}
+                </div>
+                <div>
+                  <Label htmlFor="aadharCard">Aadhar Card <span className="text-red-500">*</span></Label>
+                  <Input
+                    id="aadharCard"
+                    name="aadharCard"
+                    value={formData.aadharCard}
+                    onChange={handleChange}
+                    className={errors.aadharCard ? 'border-red-500' : ''}
+                  />
+                  {errors.aadharCard && <p className="text-red-500 text-sm">{errors.aadharCard}</p>}
+                </div>
+                <div>
+                  <Label htmlFor="panCard">PAN Card</Label>
+                  <Input
+                    id="panCard"
+                    name="panCard"
+                    value={formData.panCard}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="electricityBillNumber">Electricity Bill Number <span className="text-red-500">*</span></Label>
                   <Input
                     id="electricityBillNumber"
                     name="electricityBillNumber"
@@ -265,41 +552,9 @@ export default function AdminCustomersPage() {
                   />
                   {errors.electricityBillNumber && <p className="text-red-500 text-sm">{errors.electricityBillNumber}</p>}
                 </div>
+
                 <div>
-                  <Label htmlFor="kilowatt">Kilowatt (kW) *</Label>
-                  <Input
-                    id="kilowatt"
-                    name="kilowatt"
-                    value={formData.kilowatt}
-                    onChange={handleChange}
-                    className={errors.kilowatt ? 'border-red-500' : ''}
-                  />
-                  {errors.kilowatt && <p className="text-red-500 text-sm">{errors.kilowatt}</p>}
-                </div>
-                <div>
-                  <Label htmlFor="panelCompanyName">Panel Company Name *</Label>
-                  <Input
-                    id="panelCompanyName"
-                    name="panelCompanyName"
-                    value={formData.panelCompanyName}
-                    onChange={handleChange}
-                    className={errors.panelCompanyName ? 'border-red-500' : ''}
-                  />
-                  {errors.panelCompanyName && <p className="text-red-500 text-sm">{errors.panelCompanyName}</p>}
-                </div>
-                <div>
-                  <Label htmlFor="inverterCompanyName">Inverter Company Name *</Label>
-                  <Input
-                    id="inverterCompanyName"
-                    name="inverterCompanyName"
-                    value={formData.inverterCompanyName}
-                    onChange={handleChange}
-                    className={errors.inverterCompanyName ? 'border-red-500' : ''}
-                  />
-                  {errors.inverterCompanyName && <p className="text-red-500 text-sm">{errors.inverterCompanyName}</p>}
-                </div>
-                <div>
-                  <Label htmlFor="referredBy">Referred By *</Label>
+                  <Label htmlFor="referredBy">Referred By <span className="text-red-500">*</span></Label>
                   <Input
                     id="referredBy"
                     name="referredBy"
@@ -309,9 +564,25 @@ export default function AdminCustomersPage() {
                   />
                   {errors.referredBy && <p className="text-red-500 text-sm">{errors.referredBy}</p>}
                 </div>
-              </div>
+                </div>
+                </div>
 
-              <div className="border-t pt-6">
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-semibold mb-4">Solar System Details</h3>
+                  <div>
+                    <Label htmlFor="inverterCompanyName">Inverter Company Name <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="inverterCompanyName"
+                      name="inverterCompanyName"
+                      value={formData.inverterCompanyName}
+                      onChange={handleChange}
+                      className={errors.inverterCompanyName ? 'border-red-500' : ''}
+                    />
+                    {errors.inverterCompanyName && <p className="text-red-500 text-sm">{errors.inverterCompanyName}</p>}
+                  </div>
+                </div>
+
+                <div className="border-t pt-6">
                 <h3 className="text-lg font-semibold mb-4">Bank Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -364,7 +635,9 @@ export default function AdminCustomersPage() {
                       type="number"
                       value={formData.quotationPrice}
                       onChange={handleChange}
+                      className={errors.quotationPrice ? 'border-red-500' : ''}
                     />
+                    {errors.quotationPrice && <p className="text-red-500 text-sm">{errors.quotationPrice}</p>}
                   </div>
                   <div>
                     <Label htmlFor="dealPrice">Deal Price</Label>
@@ -459,44 +732,85 @@ export default function AdminCustomersPage() {
           <CardTitle>Customer List</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Mobile</TableHead>
-                <TableHead>Address</TableHead>
-                <TableHead>Panel Company</TableHead>
-                <TableHead>Inverter Company</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {customers.map((customer) => (
-                <TableRow key={customer.id}>
-                  <TableCell>{customer.customerName}</TableCell>
-                  <TableCell>{customer.mobileNumber}</TableCell>
-                  <TableCell>{customer.address}</TableCell>
-                  <TableCell>{customer.panelCompanyName}</TableCell>
-                  <TableCell>{customer.inverterCompanyName}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => handleView(customer)}>
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleEdit(customer)}>
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
-                      {!isEmployee && (
-                        <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDelete(customer.id)}>
-                          <Trash2 className="w-4 h-4" />
+          {/* Mobile Card View */}
+          <div className="block md:hidden space-y-4">
+            {customers.map((customer) => (
+              <Card key={customer.id} className="border">
+                <CardContent className="p-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <h3 className="font-semibold">{customer.customerName}</h3>
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="outline" onClick={() => handleView(customer)}>
+                          <Eye className="w-4 h-4" />
                         </Button>
-                      )}
+                        <Button size="sm" variant="outline" onClick={() => handleEdit(customer)}>
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                        {!isEmployee && (
+                          <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDelete(customer.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </TableCell>
+                    <div className="text-sm text-muted-foreground">
+                      <p><span className="font-medium">System Type:</span> {customer.systemType}</p>
+                      <p><span className="font-medium">Mobile:</span> {customer.mobileNumber}</p>
+                      <p><span className="font-medium">Address:</span> {customer.address}</p>
+                      <p><span className="font-medium">Pincode:</span> {customer.pincode}</p>
+                      <p><span className="font-medium">Aadhar:</span> {customer.aadharCard}</p>
+                      <p><span className="font-medium">PAN:</span> {customer.panCard}</p>
+                      <p><span className="font-medium">Panel:</span> {customer.panelCompanyName}</p>
+                      <p><span className="font-medium">Inverter:</span> {customer.inverterCompanyName}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>System Type</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Mobile</TableHead>
+                  <TableHead>Panel Company</TableHead>
+                  <TableHead>Inverter Company</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {customers.map((customer) => (
+                  <TableRow key={customer.id}>
+                    <TableCell>{customer.systemType}</TableCell>
+                    <TableCell>{customer.customerName}</TableCell>
+                    <TableCell>{customer.mobileNumber}</TableCell>
+                    <TableCell>{customer.panelCompanyName}</TableCell>
+                    <TableCell>{customer.inverterCompanyName}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => handleView(customer)}>
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => handleEdit(customer)}>
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                        {!isEmployee && (
+                          <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDelete(customer.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
@@ -507,8 +821,12 @@ export default function AdminCustomersPage() {
           </DialogHeader>
           {selectedCustomer && (
             <div className="space-y-4">
+              <div><strong>System Type:</strong> {selectedCustomer.systemType}</div>
               <div><strong>Name:</strong> {selectedCustomer.customerName}</div>
               <div><strong>Address:</strong> {selectedCustomer.address}</div>
+              <div><strong>Pincode:</strong> {selectedCustomer.pincode}</div>
+              <div><strong>Aadhar Card:</strong> {selectedCustomer.aadharCard}</div>
+              <div><strong>PAN Card:</strong> {selectedCustomer.panCard}</div>
               <div><strong>Mobile:</strong> {selectedCustomer.mobileNumber}</div>
               <div><strong>Electricity Bill Number:</strong> {selectedCustomer.electricityBillNumber}</div>
               <div><strong>Kilowatt:</strong> {selectedCustomer.kilowatt} kW</div>

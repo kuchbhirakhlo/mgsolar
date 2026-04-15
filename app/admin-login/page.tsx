@@ -11,6 +11,8 @@ export default function AdminLogin() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -80,7 +82,7 @@ export default function AdminLogin() {
           </button>
         </form>
 
-        <div className="mt-6 text-center">
+        <div className="mt-4 text-center">
           <a href="/" className="text-sm text-primary hover:underline">
             Back to Website
           </a>

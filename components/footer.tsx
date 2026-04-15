@@ -10,7 +10,7 @@ export function Footer() {
   return (
     <footer className="bg-primary text-white border-t border-white/10 py-12">
       <div className="max-w-7xl mx-auto  px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-8 mb-8">
           <div>
             <p className="text-blue-100 text-sm mb-4">
               MG Solar is a leading provider of solar energy solutions, helping homes and businesses transition to clean, renewable energy. We specialize in residential and commercial solar installations, maintenance, and support services.
@@ -86,6 +86,27 @@ export function Footer() {
                 <a href="#" className="hover:text-secondary transition">
                   Instagram
                 </a>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="font-semibold mb-4">Office</h3>
+            <ul className="space-y-2 text-sm text-blue-100">
+              <li>
+                <Link href="/admin-login" className="hover:text-secondary transition">
+                  Admin Login
+                </Link>
+              </li>
+              <li>
+                <Link href="/employee-login" className="hover:text-secondary transition">
+                  Partner Login
+                </Link>
+              </li>
+              <li>
+                <Link href="/installer-login" className="hover:text-secondary transition">
+                  Engineer Login
+                </Link>
               </li>
             </ul>
           </div>

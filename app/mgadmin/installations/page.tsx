@@ -11,6 +11,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, X, Eye, Edit2, Trash2, Loader2 } from 'lucide-react';
 import { useFormSubmit } from '@/hooks/use-form-submit';
+import { db, storage } from '@/lib/firebase';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot, QuerySnapshot, DocumentData } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 interface Customer {
   id: string;
@@ -26,8 +29,12 @@ interface Installation {
   id: string;
   customerId: string;
   installerName: string;
+  inverterSerialNumber: string;
+  acWireUsed: string;
+  dcWireUsed: string;
+  earthingWireUsed: string;
   panelSerialNumbers: string[];
-  photo?: File;
+  photoUrl?: string;
   latitude?: number;
   longitude?: number;
   specialNotes: string;
@@ -37,6 +44,8 @@ interface Installation {
 export default function AdminInstallationsPage() {
   const router = useRouter();
   const [isEmployee, setIsEmployee] = useState(false);
+  const [isInstaller, setIsInstaller] = useState(false);
+  const [employeeData, setEmployeeData] = useState<any>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [installations, setInstallations] = useState<Installation[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -47,6 +56,10 @@ export default function AdminInstallationsPage() {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [formData, setFormData] = useState({
     installerName: '',
+    inverterSerialNumber: '',
+    acWireUsed: '',
+    dcWireUsed: '',
+    earthingWireUsed: '',
     panelSerialNumbers: [''],
     specialNotes: '',
   });
@@ -56,19 +69,39 @@ export default function AdminInstallationsPage() {
   const { isLoading, submitForm } = useFormSubmit();
 
   useEffect(() => {
-    const employeeData = sessionStorage.getItem('employeeData');
-    if (employeeData) {
-      setIsEmployee(true);
+    const employeeDataStr = sessionStorage.getItem('employeeData');
+    if (employeeDataStr) {
+      const empData = JSON.parse(employeeDataStr);
+      if (empData.role === 'installer') {
+        setIsInstaller(true);
+      } else {
+        setIsEmployee(true);
+      }
+      setEmployeeData(empData);
     }
-    // Load customers and installations
-    const savedCustomers = localStorage.getItem('customers');
-    if (savedCustomers) {
-      setCustomers(JSON.parse(savedCustomers));
-    }
-    const savedInstallations = localStorage.getItem('installations');
-    if (savedInstallations) {
-      setInstallations(JSON.parse(savedInstallations));
-    }
+    // Load customers and installations from Firestore
+    const customersRef = collection(db, 'customers');
+    const unsubscribeCustomers = onSnapshot(customersRef, (snapshot: QuerySnapshot<DocumentData>) => {
+      const customersData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Customer[];
+      setCustomers(customersData);
+    });
+
+    const installationsRef = collection(db, 'installations');
+    const unsubscribeInstallations = onSnapshot(installationsRef, (snapshot: QuerySnapshot<DocumentData>) => {
+      const installationsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Installation[];
+      setInstallations(installationsData);
+    });
+
+    return () => {
+      unsubscribeCustomers();
+      unsubscribeInstallations();
+    };
   }, []);
 
   const fetchCustomer = () => {
@@ -140,6 +173,10 @@ export default function AdminInstallationsPage() {
     setSelectedInstallation(installation);
     setFormData({
       installerName: installation.installerName,
+      inverterSerialNumber: installation.inverterSerialNumber || '',
+      acWireUsed: installation.acWireUsed || '',
+      dcWireUsed: installation.dcWireUsed || '',
+      earthingWireUsed: installation.earthingWireUsed || '',
       panelSerialNumbers: installation.panelSerialNumbers,
       specialNotes: installation.specialNotes,
     });
@@ -147,11 +184,15 @@ export default function AdminInstallationsPage() {
     setShowForm(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this installation?')) {
-      const updatedInstallations = installations.filter(i => i.id !== id);
-      setInstallations(updatedInstallations);
-      localStorage.setItem('installations', JSON.stringify(updatedInstallations));
+      try {
+        await deleteDoc(doc(db, 'installations', id));
+        // Firestore onSnapshot will update the state automatically
+      } catch (error) {
+        console.error('Error deleting installation:', error);
+        alert('Error deleting installation');
+      }
     }
   };
 
@@ -164,38 +205,69 @@ export default function AdminInstallationsPage() {
     e.preventDefault();
 
     const submitInstallation = async () => {
+      let photoUrl: string | undefined;
+
+      if (photo) {
+        const storageRef = ref(storage, `installations/${Date.now()}_${photo.name}`);
+        const snapshot = await uploadBytes(storageRef, photo);
+        photoUrl = await getDownloadURL(snapshot.ref);
+      }
+
       if (isEditing && selectedInstallation) {
-        const updatedInstallation: Installation = {
-          ...selectedInstallation,
+        // Update existing installation
+        const installationRef = doc(db, 'installations', selectedInstallation.id);
+        const updatedData: any = {
           installerName: formData.installerName,
+          inverterSerialNumber: formData.inverterSerialNumber,
+          acWireUsed: formData.acWireUsed,
+          dcWireUsed: formData.dcWireUsed,
+          earthingWireUsed: formData.earthingWireUsed,
           panelSerialNumbers: formData.panelSerialNumbers.filter(s => s.trim()),
-          photo: photo || selectedInstallation.photo,
-          latitude: location?.latitude || selectedInstallation.latitude,
-          longitude: location?.longitude || selectedInstallation.longitude,
           specialNotes: formData.specialNotes,
         };
-        const updatedInstallations = installations.map(i => i.id === selectedInstallation.id ? updatedInstallation : i);
-        setInstallations(updatedInstallations);
-        localStorage.setItem('installations', JSON.stringify(updatedInstallations));
+        if (photoUrl !== undefined || selectedInstallation.photoUrl !== undefined) {
+          updatedData.photoUrl = photoUrl || selectedInstallation.photoUrl;
+        }
+        if (location?.latitude !== undefined || selectedInstallation.latitude !== undefined) {
+          updatedData.latitude = location?.latitude || selectedInstallation.latitude;
+        }
+        if (location?.longitude !== undefined || selectedInstallation.longitude !== undefined) {
+          updatedData.longitude = location?.longitude || selectedInstallation.longitude;
+        }
+        await updateDoc(installationRef, updatedData);
+        // Firestore onSnapshot will update the state automatically
       } else {
-        const newInstallation: Installation = {
-          id: Date.now().toString(),
+        // Add new installation
+        const newInstallationData: any = {
           customerId: customer!.id,
           installerName: formData.installerName,
+          inverterSerialNumber: formData.inverterSerialNumber,
+          acWireUsed: formData.acWireUsed,
+          dcWireUsed: formData.dcWireUsed,
+          earthingWireUsed: formData.earthingWireUsed,
           panelSerialNumbers: formData.panelSerialNumbers.filter(s => s.trim()),
-          photo: photo || undefined,
-          latitude: location?.latitude,
-          longitude: location?.longitude,
           specialNotes: formData.specialNotes,
           createdAt: new Date().toISOString(),
         };
-        const updatedInstallations = [newInstallation, ...installations];
-        setInstallations(updatedInstallations);
-        localStorage.setItem('installations', JSON.stringify(updatedInstallations));
+        if (photoUrl !== undefined) {
+          newInstallationData.photoUrl = photoUrl;
+        }
+        if (location?.latitude !== undefined) {
+          newInstallationData.latitude = location.latitude;
+        }
+        if (location?.longitude !== undefined) {
+          newInstallationData.longitude = location.longitude;
+        }
+        await addDoc(collection(db, 'installations'), newInstallationData);
+        // Firestore onSnapshot will update the state automatically
       }
 
       setFormData({
         installerName: '',
+        inverterSerialNumber: '',
+        acWireUsed: '',
+        dcWireUsed: '',
+        earthingWireUsed: '',
         panelSerialNumbers: [''],
         specialNotes: '',
       });
@@ -228,7 +300,7 @@ export default function AdminInstallationsPage() {
           <h1 className="text-4xl font-bold text-primary mb-2">Installations</h1>
           <p className="text-foreground/70">Manage installation records</p>
         </div>
-        {!isEmployee && (
+        {(!isEmployee || isInstaller) && (
           <Button
             onClick={() => setShowForm(!showForm)}
             className="bg-secondary text-secondary-foreground hover:bg-secondary/90 gap-2"
@@ -305,6 +377,38 @@ export default function AdminInstallationsPage() {
                         />
                         {errors.installerName && <p className="text-red-500 text-sm">{errors.installerName}</p>}
                       </div>
+                      <div>
+                        <Label htmlFor="inverterSerialNumber">Inverter Serial Number</Label>
+                        <Input
+                          id="inverterSerialNumber"
+                          value={formData.inverterSerialNumber}
+                          onChange={(e) => setFormData({ ...formData, inverterSerialNumber: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="acWireUsed">AC Wire Used</Label>
+                        <Input
+                          id="acWireUsed"
+                          value={formData.acWireUsed}
+                          onChange={(e) => setFormData({ ...formData, acWireUsed: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="dcWireUsed">DC Wire Used</Label>
+                        <Input
+                          id="dcWireUsed"
+                          value={formData.dcWireUsed}
+                          onChange={(e) => setFormData({ ...formData, dcWireUsed: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="earthingWireUsed">Earthing Wire Used</Label>
+                        <Input
+                          id="earthingWireUsed"
+                          value={formData.earthingWireUsed}
+                          onChange={(e) => setFormData({ ...formData, earthingWireUsed: e.target.value })}
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -371,11 +475,15 @@ export default function AdminInstallationsPage() {
                         setSelectedInstallation(null);
                         setCustomer(null);
                         setMobileNumber('');
-                        setFormData({
-                          installerName: '',
-                          panelSerialNumbers: [''],
-                          specialNotes: '',
-                        });
+                         setFormData({
+                           installerName: '',
+                           inverterSerialNumber: '',
+                           acWireUsed: '',
+                           dcWireUsed: '',
+                           earthingWireUsed: '',
+                           panelSerialNumbers: [''],
+                           specialNotes: '',
+                         });
                         setPhoto(null);
                         setLocation(null);
                         setErrors({});
@@ -397,45 +505,84 @@ export default function AdminInstallationsPage() {
           <CardTitle>Installation List</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Customer Name</TableHead>
-                <TableHead>Installer Name</TableHead>
-                <TableHead>Panel Serials</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {installations.map((inst) => {
-                const cust = customers.find(c => c.id === inst.customerId);
-                return (
-                  <TableRow key={inst.id}>
-                    <TableCell>{cust?.customerName || 'Unknown'}</TableCell>
-                    <TableCell>{inst.installerName}</TableCell>
-                    <TableCell>{inst.panelSerialNumbers.length}</TableCell>
-                    <TableCell>{new Date(inst.createdAt).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => handleView(inst)}>
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => handleEdit(inst)}>
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                        {!isEmployee && (
-                          <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDelete(inst.id)}>
-                            <Trash2 className="w-4 h-4" />
+          {/* Mobile Card View */}
+          <div className="block md:hidden space-y-4">
+            {installations.map((inst) => {
+              const cust = customers.find(c => c.id === inst.customerId);
+              return (
+                <Card key={inst.id} className="border">
+                  <CardContent className="p-4">
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <h3 className="font-semibold">{cust?.customerName || 'Unknown'}</h3>
+                        <div className="flex gap-1">
+                          <Button size="sm" variant="outline" onClick={() => handleView(inst)}>
+                            <Eye className="w-4 h-4" />
                           </Button>
-                        )}
+                          <Button size="sm" variant="outline" onClick={() => handleEdit(inst)}>
+                            <Edit2 className="w-4 h-4" />
+                          </Button>
+                          {!isEmployee && !isInstaller && (
+                            <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDelete(inst.id)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                      <div className="text-sm text-muted-foreground">
+                        <p><span className="font-medium">Installer:</span> {inst.installerName}</p>
+                        <p><span className="font-medium">Panels:</span> {inst.panelSerialNumbers.length} serials</p>
+                        <p><span className="font-medium">Date:</span> {new Date(inst.createdAt).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Customer Name</TableHead>
+                  <TableHead>Installer Name</TableHead>
+                  <TableHead>Panel Serials</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {installations.map((inst) => {
+                  const cust = customers.find(c => c.id === inst.customerId);
+                  return (
+                    <TableRow key={inst.id}>
+                      <TableCell>{cust?.customerName || 'Unknown'}</TableCell>
+                      <TableCell>{inst.installerName}</TableCell>
+                      <TableCell>{inst.panelSerialNumbers.length}</TableCell>
+                      <TableCell>{new Date(inst.createdAt).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" onClick={() => handleView(inst)}>
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => handleEdit(inst)}>
+                            <Edit2 className="w-4 h-4" />
+                          </Button>
+                          {!isEmployee && !isInstaller && (
+                            <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDelete(inst.id)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
@@ -448,10 +595,20 @@ export default function AdminInstallationsPage() {
             <div className="space-y-4">
               <div><strong>Customer:</strong> {customers.find(c => c.id === selectedInstallation.customerId)?.customerName}</div>
               <div><strong>Installer:</strong> {selectedInstallation.installerName}</div>
+              <div><strong>Inverter Serial:</strong> {selectedInstallation.inverterSerialNumber}</div>
+              <div><strong>AC Wire Used:</strong> {selectedInstallation.acWireUsed}</div>
+              <div><strong>DC Wire Used:</strong> {selectedInstallation.dcWireUsed}</div>
+              <div><strong>Earthing Wire Used:</strong> {selectedInstallation.earthingWireUsed}</div>
               <div><strong>Panel Serials:</strong> {selectedInstallation.panelSerialNumbers.join(', ')}</div>
               <div><strong>Special Notes:</strong> {selectedInstallation.specialNotes}</div>
               <div><strong>Date:</strong> {new Date(selectedInstallation.createdAt).toLocaleDateString()}</div>
               {selectedInstallation.latitude && <div><strong>Location:</strong> {selectedInstallation.latitude}, {selectedInstallation.longitude}</div>}
+              {selectedInstallation.photoUrl && (
+                <div>
+                  <strong>Photo:</strong>
+                  <img src={selectedInstallation.photoUrl} alt="Installation photo" className="mt-2 max-w-full h-auto" />
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

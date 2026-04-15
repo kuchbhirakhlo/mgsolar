@@ -4,41 +4,22 @@ import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
-import { MapPin, Briefcase } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { MapPin, Briefcase, Loader2 } from 'lucide-react';
 
-const positions = [
-  {
-    id: '1',
-    title: 'Solar Installation Technician',
-    location: 'Mumbai',
-    type: 'Full-time',
-    description: 'Join our installation team for residential and commercial projects',
-  },
-  {
-    id: '2',
-    title: 'Electrical Engineer',
-    location: 'Pune',
-    type: 'Full-time',
-    description: 'Design and oversee solar system installations and grid integration',
-  },
-  {
-    id: '3',
-    title: 'Business Development Manager',
-    location: 'Bangalore',
-    type: 'Full-time',
-    description: 'Expand our client base and drive business growth',
-  },
-  {
-    id: '4',
-    title: 'Customer Support Executive',
-    location: 'Remote',
-    type: 'Full-time',
-    description: 'Provide excellent customer service and technical support',
-  },
-];
+interface JobPosition {
+  id: string;
+  title: string;
+  description: string;
+  requirements: string;
+  location: string;
+  type: string;
+  createdAt: string;
+}
 
 export default function CareersPage() {
+  const [positions, setPositions] = useState<JobPosition[]>([]);
+  const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedPosition, setSelectedPosition] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -49,6 +30,24 @@ export default function CareersPage() {
     experience: '',
     message: '',
   });
+
+  useEffect(() => {
+    const fetchPositions = async () => {
+      try {
+        const response = await fetch('/api/careers');
+        if (response.ok) {
+          const data = await response.json();
+          setPositions(data);
+        }
+      } catch (error) {
+        console.error('Error fetching job positions:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPositions();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({
@@ -91,57 +90,74 @@ export default function CareersPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Job Listings */}
               <div className="lg:col-span-2 space-y-4">
-                {positions.map((position) => (
-                  <Card
-                    key={position.id}
-                    className="cursor-pointer hover:shadow-lg hover:border-accent transition-all"
-                    onClick={() => {
-                      setExpandedId(expandedId === position.id ? null : position.id);
-                      setSelectedPosition(position.id);
-                    }}
-                  >
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <CardTitle className="text-xl text-primary">{position.title}</CardTitle>
-                          <CardDescription className="text-base mt-2">
-                            {position.description}
-                          </CardDescription>
+                {loading ? (
+                  <div className="flex justify-center items-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                    <span className="ml-2 text-muted-foreground">Loading job positions...</span>
+                  </div>
+                ) : positions.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground">No job positions available at the moment.</p>
+                  </div>
+                ) : (
+                  positions.map((position) => (
+                    <Card
+                      key={position.id}
+                      className="cursor-pointer hover:shadow-lg hover:border-accent transition-all"
+                      onClick={() => {
+                        setExpandedId(expandedId === position.id ? null : position.id);
+                        setSelectedPosition(position.id);
+                      }}
+                    >
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <CardTitle className="text-xl text-primary">{position.title}</CardTitle>
+                            <CardDescription className="text-base mt-2">
+                              {position.description}
+                            </CardDescription>
+                          </div>
+                          <span className="text-2xl">
+                            {expandedId === position.id ? '−' : '+'}
+                          </span>
                         </div>
-                        <span className="text-2xl">
-                          {expandedId === position.id ? '−' : '+'}
-                        </span>
-                      </div>
 
-                      <div className="flex flex-wrap gap-4 pt-4 text-sm">
-                        <div className="flex items-center gap-2 text-foreground/70">
-                          <MapPin className="w-4 h-4" />
-                          {position.location}
+                        <div className="flex flex-wrap gap-4 pt-4 text-sm">
+                          <div className="flex items-center gap-2 text-foreground/70">
+                            <MapPin className="w-4 h-4" />
+                            {position.location}
+                          </div>
+                          <div className="flex items-center gap-2 text-foreground/70">
+                            <Briefcase className="w-4 h-4" />
+                            {position.type}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 text-foreground/70">
-                          <Briefcase className="w-4 h-4" />
-                          {position.type}
-                        </div>
-                      </div>
-                    </CardHeader>
+                      </CardHeader>
 
-                    {expandedId === position.id && (
-                      <CardContent>
-                        <Button
-                          onClick={() => {
-                            setFormData({ ...formData, position: position.title });
-                            document.getElementById('application-form')?.scrollIntoView({
-                              behavior: 'smooth',
-                            });
-                          }}
-                          className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
-                        >
-                          Apply Now
-                        </Button>
-                      </CardContent>
-                    )}
-                  </Card>
-                ))}
+                      {expandedId === position.id && (
+                        <CardContent>
+                          {position.requirements && (
+                            <div className="mb-4">
+                              <h4 className="font-semibold mb-2">Requirements:</h4>
+                              <p className="text-sm text-muted-foreground">{position.requirements}</p>
+                            </div>
+                          )}
+                          <Button
+                            onClick={() => {
+                              setFormData({ ...formData, position: position.title });
+                              document.getElementById('application-form')?.scrollIntoView({
+                                behavior: 'smooth',
+                              });
+                            }}
+                            className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                          >
+                            Apply Now
+                          </Button>
+                        </CardContent>
+                      )}
+                    </Card>
+                  ))
+                )}
               </div>
 
               {/* Application Form */}

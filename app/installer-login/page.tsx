@@ -7,7 +7,7 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { getEmployeeByFirebaseUid, getEmployeeByEmpId } from '@/lib/firebase-service';
 
-export default function EmployeeLogin() {
+export default function InstallerLogin() {
   const router = useRouter();
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
@@ -41,7 +41,7 @@ export default function EmployeeLogin() {
       const employeeData = await getEmployeeByFirebaseUid(firebaseUid);
 
       if (!employeeData) {
-        setError('Employee account not found.');
+        setError('Engineer account not found.');
         setLoading(false);
         return;
       }
@@ -52,8 +52,8 @@ export default function EmployeeLogin() {
         return;
       }
 
-      if (employeeData.role !== 'employee') {
-        setError('Access denied. This login is for engineers only.');
+      if (employeeData.role !== 'installer') {
+        setError('Access denied. This login is for employees only.');
         setLoading(false);
         return;
       }
@@ -70,8 +70,8 @@ export default function EmployeeLogin() {
       sessionStorage.setItem('employeeLoggedIn', 'true');
       sessionStorage.setItem('employeeData', JSON.stringify(sessionData));
 
-      // Navigate to employee dashboard
-      router.push('/mgadmin/customers');
+      // Navigate to installations page
+      router.push('/mgadmin/installations');
     } catch (err: any) {
       console.error('Login error:', err);
       if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-email') {
@@ -97,7 +97,7 @@ export default function EmployeeLogin() {
               className="rounded-full"
             />
           </div>
-          <h1 className="text-2xl font-bold text-primary">Employee Login</h1>
+          <h1 className="text-2xl font-bold text-primary">Engineer Login</h1>
           <p className="text-sm text-muted-foreground">MG Solar Dashboard</p>
         </div>
 
@@ -137,8 +137,6 @@ export default function EmployeeLogin() {
           >
             {loading ? 'Logging in...' : 'Login'}
           </button>
-
-
         </form>
 
         {/* Login Note */}

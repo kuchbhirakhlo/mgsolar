@@ -6,30 +6,22 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Edit2, Trash2, Plus, Upload, Loader2 } from 'lucide-react';
 import { useFormSubmit } from '@/hooks/use-form-submit';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, QuerySnapshot, DocumentData } from 'firebase/firestore';
 
-const initialProjects = [
-  {
-    id: '1',
-    title: 'Residential Complex - Mumbai',
-    location: 'Mumbai, Maharashtra',
-    capacity: '250 kW',
-    date: '2024',
-    image: '',
-  },
-  {
-    id: '2',
-    title: 'Factory Solar Installation',
-    location: 'Pune, Maharashtra',
-    capacity: '500 kW',
-    date: '2024',
-    image: '',
-  },
-];
+interface Project {
+  id: string;
+  title: string;
+  location: string;
+  capacity: string;
+  date: string;
+  image: string;
+}
 
 export default function AdminProjectsPage() {
   const router = useRouter();
   const [isEmployee, setIsEmployee] = useState(false);
-  const [projects, setProjects] = useState(initialProjects);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingProject, setEditingProject] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -43,16 +35,73 @@ export default function AdminProjectsPage() {
   const [uploading, setUploading] = useState(false);
   const { isLoading, submitForm } = useFormSubmit();
 
+  const addSampleData = async () => {
+    const sampleProjects = [
+      {
+        title: 'Residential Complex - Mumbai',
+        location: 'Mumbai, Maharashtra',
+        capacity: '250 kW',
+        date: '2024',
+        image: '',
+      },
+      {
+        title: 'Factory Solar Installation',
+        location: 'Pune, Maharashtra',
+        capacity: '500 kW',
+        date: '2024',
+        image: '',
+      },
+      {
+        title: 'Commercial Building - Delhi',
+        location: 'Delhi, Delhi',
+        capacity: '150 kW',
+        date: '2024',
+        image: '',
+      },
+      {
+        title: 'School Solar Project',
+        location: 'Bangalore, Karnataka',
+        capacity: '100 kW',
+        date: '2024',
+        image: '',
+      },
+      {
+        title: 'Hospital Renewable Energy',
+        location: 'Ahmedabad, Gujarat',
+        capacity: '300 kW',
+        date: '2024',
+        image: '',
+      }
+    ];
+
+    try {
+      for (const projectData of sampleProjects) {
+        await addDoc(collection(db, 'projects'), projectData);
+      }
+      alert('Sample projects added successfully!');
+    } catch (error) {
+      console.error('Error adding sample data:', error);
+      alert('Error adding sample data');
+    }
+  };
+
   useEffect(() => {
     const employeeData = sessionStorage.getItem('employeeData');
     if (employeeData) {
       setIsEmployee(true);
     }
-    // Load projects from localStorage
-    const storedProjects = localStorage.getItem('projects');
-    if (storedProjects) {
-      setProjects(JSON.parse(storedProjects));
-    }
+
+    // Load projects from Firebase
+    const projectsRef = collection(db, 'projects');
+    const unsubscribe = onSnapshot(projectsRef, (snapshot: QuerySnapshot<DocumentData>) => {
+      const projectsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Project[];
+      setProjects(projectsData);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -101,20 +150,11 @@ export default function AdminProjectsPage() {
     const submitProject = async () => {
       if (editingProject) {
         // Update existing project
-        const updatedProjects = projects.map(project =>
-          project.id === editingProject ? { ...project, ...formData } : project
-        );
-        setProjects(updatedProjects);
-        localStorage.setItem('projects', JSON.stringify(updatedProjects));
+        const projectRef = doc(db, 'projects', editingProject);
+        await updateDoc(projectRef, formData);
       } else {
         // Add new project
-        const newProject = {
-          id: Date.now().toString(),
-          ...formData,
-        };
-        const updatedProjects = [newProject, ...projects];
-        setProjects(updatedProjects);
-        localStorage.setItem('projects', JSON.stringify(updatedProjects));
+        await addDoc(collection(db, 'projects'), formData);
       }
 
       setFormData({ title: '', location: '', capacity: '', date: new Date().getFullYear().toString(), image: '' });
@@ -150,31 +190,48 @@ export default function AdminProjectsPage() {
     setSelectedFile(null);
   };
 
-  const handleDelete = (id: string) => {
-    const updatedProjects = projects.filter((p) => p.id !== id);
-    setProjects(updatedProjects);
-    localStorage.setItem('projects', JSON.stringify(updatedProjects));
+  const handleDelete = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this project?')) {
+      try {
+        await deleteDoc(doc(db, 'projects', id));
+      } catch (error) {
+        console.error('Error deleting project:', error);
+        alert('Error deleting project');
+      }
+    }
   };
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold text-primary mb-2">Projects</h1>
-          <p className="text-foreground/70">Manage solar installation projects</p>
+          <h1 className="text-2xl lg:text-4xl font-bold text-primary mb-1 lg:mb-2">Projects</h1>
+          <p className="text-foreground/70 text-sm lg:text-base">Manage solar installation projects</p>
         </div>
         {!isEmployee && (
-          <Button
-            onClick={() => {
-              setEditingProject(null);
-              setFormData({ title: '', location: '', capacity: '', date: new Date().getFullYear().toString(), image: '' });
-              setShowForm(!showForm);
-            }}
-            className="bg-secondary text-secondary-foreground hover:bg-secondary/90 gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Add Project
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button
+              onClick={addSampleData}
+              variant="outline"
+              className="gap-2 justify-center bg-green-600 text-white hover:bg-green-700"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Add Sample Data</span>
+              <span className="sm:hidden">Sample</span>
+            </Button>
+            <Button
+              onClick={() => {
+                setEditingProject(null);
+                setFormData({ title: '', location: '', capacity: '', date: new Date().getFullYear().toString(), image: '' });
+                setShowForm(!showForm);
+              }}
+              className="bg-secondary text-secondary-foreground hover:bg-secondary/90 gap-2 justify-center"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Add Project</span>
+              <span className="sm:hidden">Add</span>
+            </Button>
+          </div>
         )}
       </div>
 

@@ -4,6 +4,8 @@ import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Card } from '@/components/ui/card';
 import { useState, useEffect } from 'react';
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot, QuerySnapshot, DocumentData } from 'firebase/firestore';
 
 interface Project {
   id: string;
@@ -19,10 +21,17 @@ export default function ProjectsPage() {
   const [allProjects, setAllProjects] = useState<Project[]>([]);
 
   useEffect(() => {
-    const storedProjects = localStorage.getItem('projects');
-    if (storedProjects) {
-      setAllProjects(JSON.parse(storedProjects));
-    }
+    // Load projects from Firebase
+    const projectsRef = collection(db, 'projects');
+    const unsubscribe = onSnapshot(projectsRef, (snapshot: QuerySnapshot<DocumentData>) => {
+      const projectsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Project[];
+      setAllProjects(projectsData);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   return (

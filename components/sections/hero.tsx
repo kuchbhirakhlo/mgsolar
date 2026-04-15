@@ -16,6 +16,7 @@ export function HeroSection() {
     kw: '',
   });
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const timer = setTimeout(() => setShowPopup(true), 5000);
@@ -24,6 +25,7 @@ export function HeroSection() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     try {
       const response = await fetch('/api/quick-lead', {
         method: 'POST',
@@ -37,9 +39,12 @@ export function HeroSection() {
       if (response.ok) {
         setSubmitted(true);
         setTimeout(() => setShowPopup(false), 2000);
+      } else {
+        setError('Failed to submit form. Please try again.');
       }
     } catch (error) {
       console.error('Error submitting form:', error);
+      setError('Network error. Please check your connection and try again.');
     }
   };
 
@@ -164,6 +169,11 @@ export function HeroSection() {
                 <p className="text-foreground/70 mb-4">Fill details and we will call you</p>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
+                  {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                      {error}
+                    </div>
+                  )}
                   <div>
                     <input
                       type="text"
