@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { LanguageProvider } from '@/lib/language-context'
 import { WhatsAppButton } from '@/components/whatsapp-button'
+import { PWAInstall } from '@/components/pwa-install'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
   title: 'Solar Energy Solutions',
   description: 'Powering homes and businesses with clean, renewable energy',
   generator: 'v0.app',
+  manifest: '/manifest.json',
   icons: {
     icon: [
       {
@@ -39,6 +41,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-sans antialiased">
+        <PWAInstall />
         <LanguageProvider>
           {children}
           <WhatsAppButton />

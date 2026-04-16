@@ -118,6 +118,22 @@ export default function AdminDashboard() {
 
       <Card className="border-muted">
         <CardHeader>
+          <CardTitle>PWA App Downloads</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4">
+            <a href="/employee-login" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+              Download Employee App
+            </a>
+            <a href="/installer-login" className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+              Download Engineer App
+            </a>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-muted">
+        <CardHeader>
           <CardTitle>Recent Activity</CardTitle>
         </CardHeader>
         <CardContent>
