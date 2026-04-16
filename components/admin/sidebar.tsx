@@ -2,23 +2,25 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, FolderOpen, MessageSquare, LogOut, Users, UserPlus, Wrench, X, CreditCard, Truck, FileText, Briefcase } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, MessageSquare, LogOut, Users, UserPlus, Wrench, X, CreditCard, Truck, FileText, Briefcase, Receipt } from 'lucide-react';
 
 const adminNavItems = [
   { href: '/mgadmin', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/mgadmin/customers', label: 'Customers', icon: UserPlus },
+  { href: '/mgadmin/quotations', label: 'Quotations', icon: FileText },
   { href: '/mgadmin/installations', label: 'Installations', icon: Wrench },
   { href: '/mgadmin/projects', label: 'Projects', icon: FolderOpen },
   { href: '/mgadmin/payments', label: 'Payments', icon: CreditCard },
   { href: '/mgadmin/material-dispatch', label: 'Material Dispatch', icon: Truck },
   { href: '/mgadmin/careers', label: 'Careers', icon: Briefcase },
-  { href: '/mgadmin/material-bill', label: 'Material Bills', icon: FileText },
+  { href: '/mgadmin/material-bill', label: 'Material Bills', icon: Receipt },
   { href: '/mgadmin/messages', label: 'Messages', icon: MessageSquare },
   { href: '/mgadmin/employees', label: 'Employees', icon: Users },
 ];
 
 const employeeNavItems = [
   { href: '/mgadmin/customers', label: 'Customers', icon: UserPlus },
+  { href: '/mgadmin/quotations', label: 'Quotations', icon: FileText },
   { href: '/mgadmin/payments', label: 'Payments', icon: CreditCard },
 ];
 

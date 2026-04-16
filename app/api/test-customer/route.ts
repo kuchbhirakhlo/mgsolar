@@ -10,10 +10,11 @@ export async function POST() {
       mobileNumber: '9999999999',
       address: 'Test Address',
       systemType: 'on grid',
-      kilowatt: '3kw',
+      kilowatt: '3',
       panelCompanyName: 'Test Panel',
       inverterCompanyName: 'Test Inverter',
       referredBy: 'Test Referral',
+      price: '170000',
       createdAt: new Date().toISOString(),
     };
 
