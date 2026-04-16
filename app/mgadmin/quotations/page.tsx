@@ -41,18 +41,19 @@ export default function QuotationPage() {
         const data = await response.json();
         if (data.success) {
           const customer = data.customer;
-          const calculatedPrice = customer.price || (parseFloat(customer.kilowatt || '0') * 50000).toString();
+          // Extract only numbers from kilowatt (remove 'kw' text)
+          const kilowattValue = customer.kilowatt ? customer.kilowatt.toString().replace(/[^\d.]/g, '') : "";
           setForm(prev => ({
             ...prev,
             customerName: customer.customerName || "",
             address: customer.address || "",
             email: customer.email || "",
             systemType: customer.systemType || "",
-            kilowatt: customer.kilowatt || "",
+            kilowatt: kilowattValue,
             panelCompanyName: customer.panelCompanyName || "",
             inverterCompanyName: customer.inverterCompanyName || "",
             referredBy: customer.referredBy || "",
-            price: calculatedPrice,
+            price: customer.quotationPrice || "",
           }));
         } else {
           alert("Customer not found");
@@ -128,7 +129,7 @@ export default function QuotationPage() {
         <div id="pdf-content" className="bg-white">
 
           {/* ================= PAGE 1 ================= */}
-          <div className="w-[794px] h-[1123px] p-10 relative">
+          <div className="w-[794px] h-[1123px] p-10 relative border-2 border-black">
 
             {/* Watermark */}
             <div className="absolute inset-0 flex items-center justify-center opacity-10">
@@ -137,7 +138,7 @@ export default function QuotationPage() {
 
             {/* Header Image */}
             <div className="relative z-10">
-              <Image src="/mgsolarheader.png" alt="header" width={754} height={100} className="w-full"/>
+              <Image src="/mgsolarheader.png" alt="header" width={754} height={100} className="w-full" loading="eager"/>
             </div>
 
             {/* TO SECTION */}
@@ -194,8 +195,11 @@ export default function QuotationPage() {
             </div>
           </div>
 
+          {/* Gap between pages */}
+          <div className="h-8"></div>
+
           {/* ================= PAGE 2 ================= */}
-          <div className="w-[794px] h-[1123px] p-10 relative">
+          <div className="w-[794px] h-[1123px] p-10 relative border-2 border-black">
 
             {/* Watermark */}
             <div className="absolute inset-0 flex items-center justify-center opacity-10">
@@ -204,7 +208,7 @@ export default function QuotationPage() {
 
             {/* Header Image */}
             <div className="relative z-10 mb-6">
-              <Image src="/mgsolarheader.png" alt="header" width={754} height={100} className="w-full"/>
+              <Image src="/mgsolarheader.png" alt="header" width={754} height={100} className="w-full" loading="eager"/>
             </div>
 
             {/* PRICE BREAKUP */}

@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { LanguageProvider } from '@/lib/language-context'
 import { WhatsAppButton } from '@/components/whatsapp-button'
-import { PWAInstall } from '@/components/pwa-install'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -41,7 +40,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-sans antialiased">
-        <PWAInstall />
         <LanguageProvider>
           {children}
           <WhatsAppButton />
