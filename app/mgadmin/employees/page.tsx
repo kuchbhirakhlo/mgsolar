@@ -23,7 +23,7 @@ export default function EmployeesPage() {
     email: '',
     password: '',
     empId: '',
-    role: 'employee' as 'employee' | 'installer',
+    role: 'employee' as 'employee' | 'engineer',
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -183,13 +183,13 @@ export default function EmployeesPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Role</label>
-                  <Select value={formData.role} onValueChange={(value: 'employee' | 'installer') => setFormData({ ...formData, role: value })}>
+                  <Select value={formData.role} onValueChange={(value: 'employee' | 'engineer') => setFormData({ ...formData, role: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="employee">Employee</SelectItem>
-                      <SelectItem value="installer">Installer</SelectItem>
+                      <SelectItem value="engineer">Engineer</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

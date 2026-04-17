@@ -16,9 +16,9 @@ The application uses completely offline login capabilities with predefined crede
 - **Access**: Customer management, payments
 - **Method**: Offline credential lookup
 
-### 3. Installer Login (`/installer-login`)
+### 3. Engineer Login (`/installer-login`)
 - **URL**: `/installer-login`
-- **Credentials**: Predefined installer accounts
+- **Credentials**: Predefined engineer accounts
 - **Access**: Installation management
 - **Method**: Offline credential lookup
 
@@ -31,14 +31,14 @@ The application uses completely offline login capabilities with predefined crede
 | EMP003 | Bob Johnson | Employee | password123 | Active |
 | EMP005 | Charlie Brown | Employee | password123 | Blocked |
 
-### Installer Accounts
+### Engineer Accounts
 | ID | Name | Role | Password | Status |
 |----|------|------|----------|--------|
-| EMP002 | Jane Smith | Installer | password123 | Active |
-| EMP004 | Alice Wilson | Installer | password123 | Active |
-| EMP006 | Diana Prince | Installer | password123 | Active |
-| INS001 | Mike Johnson | Installer | installer123 | Active |
-| INS002 | Sarah Davis | Installer | installer123 | Active |
+| EMP002 | Jane Smith | Engineer | password123 | Active |
+| EMP004 | Alice Wilson | Engineer | password123 | Active |
+| EMP006 | Diana Prince | Engineer | password123 | Active |
+| INS001 | Mike Johnson | Engineer | installer123 | Active |
+| INS002 | Sarah Davis | Engineer | installer123 | Active |
 
 ## How Login Works
 

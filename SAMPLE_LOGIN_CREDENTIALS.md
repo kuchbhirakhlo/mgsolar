@@ -50,7 +50,7 @@ For each employee:
   "email": "john.doe@mgsolar.com",  // optional
   "password": "password123",
   "empId": "EMP001",
-  "role": "employee",  // or "installer"
+  "role": "employee",  // or "engineer"
   "isBlocked": false,
   "firebaseUid": "paste_uid_here",  // only if email provided
   "createdAt": // Click "Server timestamp"

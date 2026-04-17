@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { getEmployeeByFirebaseUid, getEmployeeByEmpId } from '@/lib/firebase-service';
+import { PWAInstall } from '@/app/components/pwa-install';
 
 export default function InstallerLogin() {
   const router = useRouter();
@@ -52,8 +53,8 @@ export default function InstallerLogin() {
         return;
       }
 
-      if (employeeData.role !== 'installer') {
-        setError('Access denied. This login is for employees only.');
+      if (employeeData.role !== 'engineer') {
+        setError('Access denied. This login is for engineers only.');
         setLoading(false);
         return;
       }
@@ -138,6 +139,10 @@ export default function InstallerLogin() {
             {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
+
+        <div className="mt-4 flex justify-center">
+          <PWAInstall />
+        </div>
 
         {/* Login Note */}
         <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">

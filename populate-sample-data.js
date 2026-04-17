@@ -80,7 +80,7 @@ async function populateSampleData() {
         email: 'jane.smith@mgsolar.com',
         password: 'password123',
         empId: 'EMP002',
-        role: 'installer',
+        role: 'engineer',
         isBlocked: false
       },
       {
@@ -98,7 +98,7 @@ async function populateSampleData() {
         email: 'alice.wilson@mgsolar.com',
         password: 'password123',
         empId: 'EMP004',
-        role: 'installer',
+        role: 'engineer',
         isBlocked: false
       },
       {
@@ -115,7 +115,7 @@ async function populateSampleData() {
         email: 'diana.prince@mgsolar.com',
         password: 'password123',
         empId: 'EMP006',
-        role: 'installer',
+        role: 'engineer',
         isBlocked: false
       }
     ];

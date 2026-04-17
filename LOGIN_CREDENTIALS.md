@@ -17,27 +17,27 @@
 | EMP003 | Bob Johnson | Employee | password123 | ✅ Active |
 | EMP005 | Charlie Brown | Employee | password123 | ❌ Blocked |
 
-## Installer Login (`/installer-login`)
-- **Method**: Enter Installer ID and Password
+## Engineer Login (`/installer-login`)
+- **Method**: Enter Engineer ID and Password
 - **Authentication**: Predefined credentials (completely offline)
 
-### Installer Test Accounts
+### Engineer Test Accounts
 | Employee ID | Name | Role | Password | Status |
 |-------------|------|------|----------|--------|
-| EMP002 | Jane Smith | Installer | password123 | ✅ Active |
-| EMP004 | Alice Wilson | Installer | password123 | ✅ Active |
-| EMP006 | Diana Prince | Installer | password123 | ✅ Active |
-| INS001 | Mike Johnson | Installer | installer123 | ✅ Active |
-| INS002 | Sarah Davis | Installer | installer123 | ✅ Active |
+| EMP002 | Jane Smith | Engineer | password123 | ✅ Active |
+| EMP004 | Alice Wilson | Engineer | password123 | ✅ Active |
+| EMP006 | Diana Prince | Engineer | password123 | ✅ Active |
+| INS001 | Mike Johnson | Engineer | installer123 | ✅ Active |
+| INS002 | Sarah Davis | Engineer | installer123 | ✅ Active |
 
 ## Quick Test Steps
 
 1. **Admin Login**: Go to `/admin-login` → Click "Auto-fill Admin Credentials" → Login
 2. **Employee Login**: Go to `/employee-login` → Click any employee test button → Login
-3. **Installer Login**: Go to `/installer-login` → Click any installer test button → Login
+3. **Engineer Login**: Go to `/installer-login` → Click any engineer test button → Login
 4. **Check Permissions**:
    - Employees see: Customers, Payments
-   - Installers see: Engineers (Installations)
+   - Engineers see: Installations
    - Admin sees: All features
 
 ## Features

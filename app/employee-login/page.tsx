@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { getEmployeeByFirebaseUid, getEmployeeByEmpId } from '@/lib/firebase-service';
+import { PWAInstall } from '@/app/components/pwa-install';
 
 export default function EmployeeLogin() {
   const router = useRouter();
@@ -138,8 +139,11 @@ export default function EmployeeLogin() {
             {loading ? 'Logging in...' : 'Login'}
           </button>
 
-
         </form>
+
+        <div className="mt-4 flex justify-center">
+          <PWAInstall />
+        </div>
 
         {/* Login Note */}
         <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">

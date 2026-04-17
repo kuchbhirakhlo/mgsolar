@@ -36,14 +36,14 @@ export default function AdminLayout({
           if (employee.isBlocked) {
             sessionStorage.removeItem('employeeData');
             sessionStorage.removeItem('employeeLoggedIn');
-            if (employee.role === 'installer' || employee.isInstaller) {
+            if (employee.role === 'engineer' || employee.isInstaller) {
               router.push('/installer-login');
             } else {
               router.push('/employee-login');
             }
             return;
           }
-          if (employee.role === 'installer' || employee.isInstaller) {
+          if (employee.role === 'engineer' || employee.isInstaller) {
             setIsInstaller(true);
             setIsEmployee(false);
           } else {

@@ -50,7 +50,7 @@ export interface Employee {
   email?: string;
   password: string;
   empId: string;
-  role: 'employee' | 'installer';
+  role: 'employee' | 'engineer';
   isBlocked: boolean;
   firebaseUid?: string;
   createdAt?: any;

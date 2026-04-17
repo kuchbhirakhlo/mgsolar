@@ -68,7 +68,7 @@ After creating each Auth user, copy the **User UID** and create corresponding Fi
   "email": "jane.smith@mgsolar.com",
   "password": "password123",
   "empId": "EMP002",
-  "role": "installer",
+  "role": "engineer",
   "isBlocked": false,
   "firebaseUid": "PASTE_UID_HERE",
   "createdAt": "SERVER_TIMESTAMP"
@@ -98,7 +98,7 @@ After creating each Auth user, copy the **User UID** and create corresponding Fi
   "email": "alice.wilson@mgsolar.com",
   "password": "password123",
   "empId": "EMP004",
-  "role": "installer",
+  "role": "engineer",
   "isBlocked": false,
   "firebaseUid": "PASTE_UID_HERE",
   "createdAt": "SERVER_TIMESTAMP"
@@ -126,7 +126,7 @@ After creating each Auth user, copy the **User UID** and create corresponding Fi
   "email": "diana.prince@mgsolar.com",
   "password": "password123",
   "empId": "EMP006",
-  "role": "installer",
+  "role": "engineer",
   "isBlocked": false,
   "firebaseUid": "PASTE_UID_HERE",
   "createdAt": "SERVER_TIMESTAMP"
@@ -144,5 +144,5 @@ After creating each Auth user, copy the **User UID** and create corresponding Fi
 ## Step 5: Verify User Permissions
 
 - **EMP001, EMP003**: Should see full employee menu
-- **EMP002, EMP004, EMP006**: Should see installer menu (limited options)
+- **EMP002, EMP004, EMP006**: Should see engineer menu (limited options)
 - **EMP005**: Should show "Account blocked" error
