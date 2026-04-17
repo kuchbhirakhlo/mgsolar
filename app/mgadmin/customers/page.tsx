@@ -334,6 +334,13 @@ export default function AdminCustomersPage() {
           console.log('Customer updated successfully');
         } else {
           console.log('Adding new customer');
+          // Check if customer with this mobile number already exists
+          const q = query(collection(db, 'customers'), where('mobileNumber', '==', formData.mobileNumber));
+          const snapshot = await getDocs(q);
+          if (!snapshot.empty) {
+            throw new Error('A customer with this mobile number already exists. Please use a different mobile number.');
+          }
+
           // Add new customer
           const newCustomerData = {
             ...formData,
@@ -771,7 +778,7 @@ export default function AdminCustomersPage() {
           </div>
 
           {/* Desktop Table View */}
-          <div className="hidden md:block">
+          <div className="hidden md:block overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -820,7 +827,7 @@ export default function AdminCustomersPage() {
             <DialogTitle>Customer Details</DialogTitle>
           </DialogHeader>
           {selectedCustomer && (
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-96 overflow-y-auto">
               <div><strong>System Type:</strong> {selectedCustomer.systemType}</div>
               <div><strong>Name:</strong> {selectedCustomer.customerName}</div>
               <div><strong>Address:</strong> {selectedCustomer.address}</div>

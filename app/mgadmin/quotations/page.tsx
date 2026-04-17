@@ -73,11 +73,35 @@ export default function QuotationPage() {
         }
       } catch (error) {
         console.error("Error fetching customer:", error);
-        alert("Error fetching customer");
+        if (error.name !== 'AbortError') {
+          alert("Error fetching customer");
+        }
       }
     } else {
       alert("Please enter a valid 10-digit mobile number");
     }
+  };
+
+  const numberToWords = (num: number): string => {
+    if (num === 0) return "Zero";
+
+    const belowTwenty = [
+      "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
+      "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
+      "Seventeen", "Eighteen", "Nineteen"
+    ];
+    const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+
+    const helper = (n: number): string => {
+      if (n < 20) return belowTwenty[n];
+      if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? " " + belowTwenty[n % 10] : "");
+      if (n < 1000) return belowTwenty[Math.floor(n / 100)] + " Hundred" + (n % 100 !== 0 ? " " + helper(n % 100) : "");
+      if (n < 100000) return helper(Math.floor(n / 1000)) + " Thousand" + (n % 1000 !== 0 ? " " + helper(n % 1000) : "");
+      if (n < 10000000) return helper(Math.floor(n / 100000)) + " Lakh" + (n % 100000 !== 0 ? " " + helper(n % 100000) : "");
+      return helper(Math.floor(n / 10000000)) + " Crore" + (n % 10000000 !== 0 ? " " + helper(n % 10000000) : "");
+    };
+
+    return helper(num);
   };
 
   const downloadPDF = () => {
@@ -227,7 +251,7 @@ export default function QuotationPage() {
               </table>
 
               <p className="mt-2">
-                (Amount in words: Rupees One Lakh Seventy Thousand Only)
+                (Amount in words: Rupees {numberToWords(parseInt(form.price || '0'))} Only)
               </p>
             </div>
 
@@ -268,7 +292,7 @@ export default function QuotationPage() {
             {/* SIGNATURE */}
             <div className="mt-16 flex justify-between text-sm">
               <div>
-                <p>Consumer Name:</p>
+                <p>Consumer Name: {form.customerName}</p>
                 <p>Signature:</p>
               </div>
 

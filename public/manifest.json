@@ -2,7 +2,7 @@
   "name": "M.G. Enterprises Solar App",
   "short_name": "MG Solar",
   "description": "Solar installation and management app",
-  "start_url": "/pwa-start",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#000000",

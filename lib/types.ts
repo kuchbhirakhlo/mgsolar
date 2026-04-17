@@ -85,6 +85,7 @@ export interface Customer {
 export interface Payment {
   id: string;
   customerId: string;
+  customerName: string;
   projectCost: string;
   firstPayment: string;
   secondPayment: string;

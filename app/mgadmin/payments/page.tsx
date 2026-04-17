@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Eye, Edit2, Trash2, Loader2 } from 'lucide-react';
 import { useFormSubmit } from '@/hooks/use-form-submit';
@@ -101,8 +101,10 @@ export default function AdminPaymentsPage() {
       }
     } catch (error) {
       console.error('Error fetching customer:', error);
-      setErrors({ mobile: 'Error fetching customer' });
-      setCustomer(null);
+      if (error.name !== 'AbortError') {
+        setErrors({ mobile: 'Error fetching customer' });
+        setCustomer(null);
+      }
     }
   };
 
@@ -162,6 +164,7 @@ export default function AdminPaymentsPage() {
         } else {
           const newPaymentData = {
             customerId: customer!.id,
+            customerName: customer!.customerName,
             projectCost: customer!.dealPrice,
             ...formData,
             createdAt: new Date().toISOString(),
@@ -404,7 +407,7 @@ export default function AdminPaymentsPage() {
                   <CardContent className="p-4">
                     <div className="space-y-2">
                       <div className="flex justify-between">
-                        <h3 className="font-semibold">{cust?.customerName || `Customer ${payment.customerId.slice(-6)}`}</h3>
+                        <h3 className="font-semibold">{payment.customerName || cust?.customerName || `Customer ${payment.customerId.slice(-6)}`}</h3>
                         <div className="flex gap-1">
                           <Button size="sm" variant="outline" onClick={() => handleView(payment)}>
                             <Eye className="w-4 h-4" />
@@ -422,7 +425,7 @@ export default function AdminPaymentsPage() {
                         <p><span className="font-medium">First Payment:</span> ₹{payment.firstPayment}</p>
                         <p><span className="font-medium">Due Balance:</span> ₹{dueBalance.toLocaleString()}</p>
                         <p><span className="font-medium">Mode:</span> {payment.modeOfPayment}</p>
-                        <p><span className="font-medium">Date:</span> {new Date(payment.createdAt).toLocaleDateString()}</p>
+                         <p><span className="font-medium">Date:</span> {new Date(payment.createdAt).toLocaleDateString('en-GB')}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -457,12 +460,12 @@ export default function AdminPaymentsPage() {
 
                   return (
                     <TableRow key={payment.id}>
-                      <TableCell>{cust?.customerName || `Customer ${payment.customerId.slice(-6)}`}</TableCell>
+                      <TableCell>{payment.customerName || cust?.customerName || `Customer ${payment.customerId.slice(-6)}`}</TableCell>
                       <TableCell>₹{payment.projectCost}</TableCell>
                       <TableCell>₹{payment.firstPayment}</TableCell>
                       <TableCell>₹{dueBalance.toLocaleString()}</TableCell>
                       <TableCell>{payment.modeOfPayment}</TableCell>
-                      <TableCell>{new Date(payment.createdAt).toLocaleDateString()}</TableCell>
+                       <TableCell>{new Date(payment.createdAt).toLocaleDateString('en-GB')}</TableCell>
                       <TableCell>
                         <div className="flex gap-2">
                           <Button size="sm" variant="outline" onClick={() => handleView(payment)}>
@@ -492,7 +495,7 @@ export default function AdminPaymentsPage() {
           </DialogHeader>
           {selectedPayment && (
             <div className="space-y-4">
-              <div><strong>Customer:</strong> {customers.find(c => c.id === selectedPayment.customerId)?.customerName || `Customer ${selectedPayment.customerId.slice(-6)}`}</div>
+              <div><strong>Customer:</strong> {selectedPayment.customerName || customers.find(c => c.id === selectedPayment.customerId)?.customerName || `Customer ${selectedPayment.customerId.slice(-6)}`}</div>
               <div><strong>Project Cost:</strong> ₹{selectedPayment.projectCost}</div>
               <div><strong>First Payment:</strong> ₹{selectedPayment.firstPayment}</div>
               <div><strong>Second Payment:</strong> ₹{selectedPayment.secondPayment || '0'}</div>
@@ -501,7 +504,7 @@ export default function AdminPaymentsPage() {
               <div><strong>Mode of Payment:</strong> {selectedPayment.modeOfPayment}</div>
               <div><strong>Transaction ID:</strong> {selectedPayment.transactionId}</div>
               <div><strong>Notes:</strong> {selectedPayment.notes}</div>
-              <div><strong>Date:</strong> {new Date(selectedPayment.createdAt).toLocaleDateString()}</div>
+              <div><strong>Date:</strong> {new Date(selectedPayment.createdAt).toLocaleDateString('en-GB')}</div>
             </div>
           )}
         </DialogContent>
