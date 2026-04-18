@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, Plus, Ban, CheckCircle } from 'lucide-react';
-import { addEmployee, getEmployees, blockEmployee } from '@/lib/firebase-service';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Users, Plus, Ban, CheckCircle, Edit, Eye, Key } from 'lucide-react';
+import { addEmployee, getEmployees, blockEmployee, updateEmployee, getEmployeeByEmpId, resetEmployeePassword } from '@/lib/firebase-service';
 import type { Employee } from '@/lib/types';
 
 export default function EmployeesPage() {
@@ -27,6 +28,11 @@ export default function EmployeesPage() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [editingEmployee, setEditingEmployee] = useState<(Employee & { id: string }) | null>(null);
+  const [viewingEmployee, setViewingEmployee] = useState<(Employee & { id: string }) | null>(null);
+  const [editData, setEditData] = useState({ empId: '', role: 'employee' as 'employee' | 'engineer' });
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   useEffect(() => {
     const employeeData = sessionStorage.getItem('employeeData');
@@ -82,6 +88,13 @@ export default function EmployeesPage() {
     setSubmitting(true);
     setSubmitError(null);
     try {
+      // Check if employee ID already exists
+      const existingEmployee = await getEmployeeByEmpId(formData.empId);
+      if (existingEmployee) {
+        setSubmitError('Employee ID already exists. Please choose a different ID.');
+        return;
+      }
+
       await addEmployee({
         ...formData,
         isBlocked: false,
@@ -108,6 +121,62 @@ export default function EmployeesPage() {
       loadEmployees(0);
     } catch (error) {
       console.error('Error updating employee:', error);
+    }
+  };
+
+  const handleEdit = (employee: Employee & { id: string }) => {
+    setEditingEmployee(employee);
+    setEditData({ empId: employee.empId, role: employee.role });
+    setEditError(null);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEmployee) return;
+    setEditSubmitting(true);
+    setEditError(null);
+    try {
+      // Check if employee ID already exists (only if it changed)
+      if (editData.empId !== editingEmployee.empId) {
+        const existingEmployee = await getEmployeeByEmpId(editData.empId);
+        if (existingEmployee) {
+          setEditError('Employee ID already exists. Please choose a different ID.');
+          return;
+        }
+      }
+
+      await updateEmployee(editingEmployee.id, { empId: editData.empId, role: editData.role });
+      setEditingEmployee(null);
+      loadEmployees(0);
+    } catch (error: any) {
+      console.error('Error updating employee:', error);
+      setEditError(error.message || 'Failed to update employee.');
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
+  const handleView = (employee: Employee & { id: string }) => {
+    setViewingEmployee(employee);
+  };
+
+  const closeEditModal = () => {
+    setEditingEmployee(null);
+    setEditError(null);
+  };
+
+  const closeViewModal = () => {
+    setViewingEmployee(null);
+  };
+
+  const handleResetPassword = async (id: string) => {
+    try {
+      await resetEmployeePassword(id);
+      // Optionally show success message or reload
+      alert('Password reset to default (password123)');
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      alert('Failed to reset password');
     }
   };
 
@@ -254,24 +323,53 @@ export default function EmployeesPage() {
                           <p><span className="font-medium">ID:</span> {emp.empId}</p>
                           <p><span className="font-medium">Mobile:</span> {emp.mobileNumber}</p>
                         </div>
-                        <Button
-                          size="sm"
-                          variant={emp.isBlocked ? 'default' : 'destructive'}
-                          onClick={() => handleBlockToggle(emp.id, emp.isBlocked)}
-                          className="w-full mt-2"
-                        >
-                          {emp.isBlocked ? (
-                            <>
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              Unblock
-                            </>
-                          ) : (
-                            <>
-                              <Ban className="w-3 h-3 mr-1" />
-                              Block
-                            </>
-                          )}
-                        </Button>
+                        <div className="flex gap-2 mt-2 flex-wrap">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEdit(emp)}
+                            className="flex-1 min-w-0"
+                          >
+                            <Edit className="w-3 h-3 mr-1" />
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleView(emp)}
+                            className="flex-1 min-w-0"
+                          >
+                            <Eye className="w-3 h-3 mr-1" />
+                            View
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleResetPassword(emp.id)}
+                            className="flex-1 min-w-0"
+                          >
+                            <Key className="w-3 h-3 mr-1" />
+                            Reset
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={emp.isBlocked ? 'default' : 'destructive'}
+                            onClick={() => handleBlockToggle(emp.id, emp.isBlocked)}
+                            className="flex-1 min-w-0"
+                          >
+                            {emp.isBlocked ? (
+                              <>
+                                <CheckCircle className="w-3 h-3 mr-1" />
+                                Unblock
+                              </>
+                            ) : (
+                              <>
+                                <Ban className="w-3 h-3 mr-1" />
+                                Block
+                              </>
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -304,24 +402,51 @@ export default function EmployeesPage() {
                           )}
                         </td>
                         <td className="py-3 px-4">
-                          <Button
-                            size="sm"
-                            variant={emp.isBlocked ? 'default' : 'destructive'}
-                            onClick={() => handleBlockToggle(emp.id, emp.isBlocked)}
-                            className="flex items-center gap-1"
-                          >
-                            {emp.isBlocked ? (
-                              <>
-                                <CheckCircle className="w-3 h-3" />
-                                Unblock
-                              </>
-                            ) : (
-                              <>
-                                <Ban className="w-3 h-3" />
-                                Block
-                              </>
-                            )}
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEdit(emp)}
+                              title="Edit"
+                            >
+                              <Edit className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleView(emp)}
+                              title="View"
+                            >
+                              <Eye className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => handleResetPassword(emp.id)}
+                              title="Reset Password"
+                            >
+                              <Key className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant={emp.isBlocked ? 'default' : 'destructive'}
+                              onClick={() => handleBlockToggle(emp.id, emp.isBlocked)}
+                              className="flex items-center gap-1"
+                              title={emp.isBlocked ? 'Unblock' : 'Block'}
+                            >
+                              {emp.isBlocked ? (
+                                <>
+                                  <CheckCircle className="w-3 h-3" />
+                                  Unblock
+                                </>
+                              ) : (
+                                <>
+                                  <Ban className="w-3 h-3" />
+                                  Block
+                                </>
+                              )}
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -332,6 +457,72 @@ export default function EmployeesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Employee Modal */}
+      <Dialog open={!!editingEmployee} onOpenChange={(open) => !open && closeEditModal()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Employee Details</DialogTitle>
+          </DialogHeader>
+          {editingEmployee && (
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Employee ID</label>
+                <Input
+                  value={editData.empId}
+                  onChange={(e) => setEditData({ ...editData, empId: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Role</label>
+                <Select value={editData.role} onValueChange={(value: 'employee' | 'engineer') => setEditData({ ...editData, role: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="employee">Employee</SelectItem>
+                    <SelectItem value="engineer">Engineer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {editError && (
+                <p className="text-red-500 text-sm">{editError}</p>
+              )}
+              <div className="flex gap-2 justify-end">
+                <Button type="button" variant="outline" onClick={closeEditModal}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={editSubmitting}>
+                  {editSubmitting ? 'Updating...' : 'Update'}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* View Employee Modal */}
+      <Dialog open={!!viewingEmployee} onOpenChange={(open) => !open && closeViewModal()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Employee Details</DialogTitle>
+          </DialogHeader>
+          {viewingEmployee && (
+            <div className="space-y-2">
+              <p><strong>ID:</strong> {viewingEmployee.id}</p>
+              <p><strong>Name:</strong> {viewingEmployee.name}</p>
+              <p><strong>Mobile Number:</strong> {viewingEmployee.mobileNumber}</p>
+              <p><strong>Email:</strong> {viewingEmployee.email || 'N/A'}</p>
+              <p><strong>Employee ID:</strong> {viewingEmployee.empId}</p>
+              <p><strong>Role:</strong> {viewingEmployee.role}</p>
+              <p><strong>Status:</strong> {viewingEmployee.isBlocked ? 'Blocked' : 'Active'}</p>
+              <p><strong>Firebase UID:</strong> {viewingEmployee.firebaseUid || 'N/A'}</p>
+              <p><strong>Created At:</strong> {viewingEmployee.createdAt ? new Date(viewingEmployee.createdAt.seconds * 1000).toLocaleString() : 'N/A'}</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

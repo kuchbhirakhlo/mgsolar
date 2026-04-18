@@ -196,6 +196,10 @@ export async function blockEmployee(id: string, isBlocked: boolean) {
   await updateDoc(doc(db, 'employees', id), { isBlocked })
 }
 
+export async function resetEmployeePassword(id: string, newPassword: string = 'password123') {
+  await updateDoc(doc(db, 'employees', id), { password: newPassword })
+}
+
 // Payments
 export async function addPayment(payment: Omit<Payment, 'id'>) {
   const docRef = await addDoc(collection(db, 'payments'), {
