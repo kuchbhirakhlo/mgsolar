@@ -105,7 +105,7 @@ export function Footer() {
               </li>
               <li>
                 <Link href="/installer-login" className="hover:text-secondary transition">
-                  Engineer Login
+                  Partner Login
                 </Link>
               </li>
             </ul>

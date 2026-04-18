@@ -68,6 +68,7 @@ export default function AdminCustomersPage() {
   const [isEmployee, setIsEmployee] = useState(false);
   const [employeeData, setEmployeeData] = useState<any>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -95,6 +96,7 @@ export default function AdminCustomersPage() {
     wireType: '',
     acWireBrand: '',
     dcWireBrand: '',
+    assignedEmployee: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -107,6 +109,23 @@ export default function AdminCustomersPage() {
       setIsEmployee(true);
       setEmployeeData(empData);
     }
+
+    // Load employees for admin dropdown
+    const loadEmployees = async () => {
+      try {
+        const employeesRef = collection(db, 'employees');
+        const employeesSnapshot = await getDocs(employeesRef);
+        const employeesData = employeesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as any)).filter((emp: any) => emp.role === 'employee' && emp.isBlocked !== true);
+        setEmployees(employeesData);
+      } catch (error) {
+        console.error('Error loading employees:', error);
+      }
+    };
+
+    loadEmployees();
 
     // Load customers based on role
     let unsubscribe: () => void;
@@ -201,6 +220,7 @@ export default function AdminCustomersPage() {
       wireType: customer.wireType || '',
       acWireBrand: customer.acWireBrand || '',
       dcWireBrand: customer.dcWireBrand || '',
+      assignedEmployee: customer.createdBy || '',
     });
     setIsEditing(true);
     setShowForm(true);
@@ -342,9 +362,10 @@ export default function AdminCustomersPage() {
           }
 
           // Add new customer
+          const { assignedEmployee, ...customerData } = formData;
           const newCustomerData = {
-            ...formData,
-            ...(employeeData?.empId && { createdBy: employeeData.empId }),
+            ...customerData,
+            createdBy: assignedEmployee || employeeData?.empId || 'admin',
           };
           console.log('New customer data:', newCustomerData);
           const docRef = await addDoc(collection(db, 'customers'), newCustomerData);
@@ -374,6 +395,7 @@ export default function AdminCustomersPage() {
           wireType: '',
           acWireBrand: '',
           dcWireBrand: '',
+          assignedEmployee: '',
         });
         setShowForm(false);
         setIsEditing(false);
@@ -560,19 +582,38 @@ export default function AdminCustomersPage() {
                   {errors.electricityBillNumber && <p className="text-red-500 text-sm">{errors.electricityBillNumber}</p>}
                 </div>
 
-                <div>
-                  <Label htmlFor="referredBy">Referred By <span className="text-red-500">*</span></Label>
-                  <Input
-                    id="referredBy"
-                    name="referredBy"
-                    value={formData.referredBy}
-                    onChange={handleChange}
-                    className={errors.referredBy ? 'border-red-500' : ''}
-                  />
-                  {errors.referredBy && <p className="text-red-500 text-sm">{errors.referredBy}</p>}
-                </div>
-                </div>
-                </div>
+                 <div>
+                   <Label htmlFor="referredBy">Referred By <span className="text-red-500">*</span></Label>
+                   <Input
+                     id="referredBy"
+                     name="referredBy"
+                     value={formData.referredBy}
+                     onChange={handleChange}
+                     className={errors.referredBy ? 'border-red-500' : ''}
+                   />
+                   {errors.referredBy && <p className="text-red-500 text-sm">{errors.referredBy}</p>}
+                 </div>
+
+                 {!employeeData && (
+                   <div>
+                     <Label htmlFor="assignedEmployee">Assign to Employee</Label>
+                     <Select value={formData.assignedEmployee} onValueChange={(value) => handleSelectChange('assignedEmployee', value)}>
+                       <SelectTrigger>
+                         <SelectValue placeholder="Select employee (optional)" />
+                       </SelectTrigger>
+                       <SelectContent>
+                         <SelectItem value="">None (Admin only)</SelectItem>
+                         {employees.map((emp) => (
+                           <SelectItem key={emp.id} value={emp.empId}>
+                             {emp.name} ({emp.empId})
+                           </SelectItem>
+                         ))}
+                       </SelectContent>
+                     </Select>
+                   </div>
+                 )}
+                 </div>
+                 </div>
 
                 <div className="border-t pt-6">
                   <h3 className="text-lg font-semibold mb-4">Solar System Details</h3>

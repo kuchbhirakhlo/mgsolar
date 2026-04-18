@@ -98,7 +98,7 @@ export default function EmployeeLogin() {
               className="rounded-full"
             />
           </div>
-          <h1 className="text-2xl font-bold text-primary">Employee Login</h1>
+          <h1 className="text-2xl font-bold text-primary">MG Partner</h1>
           <p className="text-sm text-muted-foreground">MG Solar Dashboard</p>
         </div>
 

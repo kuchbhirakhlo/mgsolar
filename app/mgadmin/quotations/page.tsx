@@ -3,12 +3,38 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import html2pdf from "html2pdf.js";
+import { db, storage } from '@/lib/firebase';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot, QuerySnapshot, DocumentData } from 'firebase/firestore';
+import { useFormSubmit } from '@/hooks/use-form-submit';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+
+interface Quotation {
+  id: string;
+  customerId: string;
+  quotationNo: string;
+  date: string;
+  customerName: string;
+  address: string;
+  price: string;
+  mobileNumber: string;
+  email: string;
+  systemType: string;
+  kilowatt: string;
+  panelCompanyName: string;
+  inverterCompanyName: string;
+  referredBy: string;
+  createdAt: string;
+}
 
 export default function QuotationPage() {
+  const [isEmployee, setIsEmployee] = useState(false);
+  const [employeeData, setEmployeeData] = useState<any>(null);
+  const [quotations, setQuotations] = useState<Quotation[]>([]);
 
   const [form, setForm] = useState({
     quotationNo: "",
     date: "",
+    customerId: "",
     customerName: "",
     address: "",
     price: "",
@@ -23,11 +49,59 @@ export default function QuotationPage() {
 
 
 
+  const { isLoading, submitForm } = useFormSubmit();
+
   useEffect(() => {
+    const employeeDataStr = sessionStorage.getItem('employeeData');
+    if (employeeDataStr) {
+      setIsEmployee(true);
+      setEmployeeData(JSON.parse(employeeDataStr));
+    }
+
+    // Load quotations from Firestore
+    let unsubscribe: (() => void) | undefined;
+
+    const loadQuotations = async () => {
+      const quotationsRef = collection(db, 'quotations');
+      unsubscribe = onSnapshot(quotationsRef, async (snapshot: QuerySnapshot<DocumentData>) => {
+        const quotationsData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Quotation[];
+
+        // Filter quotations based on employee permissions
+        let filteredQuotations = quotationsData;
+
+        // Check if user is employee by reading sessionStorage directly
+        const employeeDataStr = sessionStorage.getItem('employeeData');
+        if (employeeDataStr) {
+          const empData = JSON.parse(employeeDataStr);
+          // For employees, only show quotations for customers they created
+          const customersRef = collection(db, 'customers');
+          const customersSnapshot = await getDocs(query(customersRef, where('createdBy', '==', empData.empId)));
+          const employeeCustomerIds = customersSnapshot.docs.map(doc => doc.id);
+
+          filteredQuotations = quotationsData.filter(quotation =>
+            employeeCustomerIds.includes(quotation.customerId)
+          );
+        }
+
+        setQuotations(filteredQuotations.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      });
+    };
+
+    loadQuotations().catch(console.error);
+
     const today = new Date();
     const dateStr = today.toLocaleDateString('en-GB'); // DD/MM/YYYY
     const quotationNo = `MGE/${Math.floor(Date.now() / 1000)}/2026`;
     setForm(prev => ({ ...prev, date: dateStr, quotationNo }));
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
 
   const handleChange = (e: any) => {
@@ -37,7 +111,12 @@ export default function QuotationPage() {
   const fetchCustomer = async () => {
     if (form.mobileNumber.length === 10) {
       try {
-        const response = await fetch(`/api/customers/${form.mobileNumber}`);
+        // Build URL with employee ID if user is an employee
+        const url = employeeData
+          ? `/api/customers/${form.mobileNumber}?employeeId=${employeeData.empId}`
+          : `/api/customers/${form.mobileNumber}`;
+
+        const response = await fetch(url);
         const data = await response.json();
         if (data.success) {
           const customer = data.customer;
@@ -45,6 +124,7 @@ export default function QuotationPage() {
           const kilowattValue = customer.kilowatt ? customer.kilowatt.toString().replace(/[^\d.]/g, '') : "";
           setForm(prev => ({
             ...prev,
+            customerId: customer.id,
             customerName: customer.customerName || "",
             address: customer.address || "",
             email: customer.email || "",
@@ -60,6 +140,7 @@ export default function QuotationPage() {
           // Reset if not found
           setForm(prev => ({
             ...prev,
+            customerId: "",
             customerName: "",
             address: "",
             email: "",
@@ -73,7 +154,7 @@ export default function QuotationPage() {
         }
       } catch (error) {
         console.error("Error fetching customer:", error);
-        if (error.name !== 'AbortError') {
+        if (!(error instanceof Error) || error.name !== 'AbortError') {
           alert("Error fetching customer");
         }
       }
@@ -104,25 +185,157 @@ export default function QuotationPage() {
     return helper(num);
   };
 
-  const downloadPDF = () => {
+  const handleSubmit = async () => {
+    const submitQuotation = async () => {
+      const quotationData = {
+        ...form,
+        createdAt: new Date().toISOString(),
+      };
+      await addDoc(collection(db, 'quotations'), quotationData);
+    };
+
+    if (validateForm()) {
+      submitForm(
+        submitQuotation,
+        'Quotation saved successfully!'
+      );
+    }
+  };
+
+  const validateForm = () => {
+    if (!form.customerName.trim()) {
+      alert('Customer name is required');
+      return false;
+    }
+    if (!form.mobileNumber.trim()) {
+      alert('Mobile number is required');
+      return false;
+    }
+    if (!form.price.trim()) {
+      alert('Price is required');
+      return false;
+    }
+    return true;
+  };
+
+  const downloadPDF = (quotationData?: Quotation) => {
     const element = document.getElementById("pdf-content");
 
-    html2pdf()
-      .from(element!)
-      .set({
-        margin: 0,
-        filename: "quotation.pdf",
-        html2canvas: { scale: 2 },
-        jsPDF: { format: "a4", orientation: "portrait" },
-      })
-      .save();
+    if (!element) {
+      alert("PDF content not found");
+      return;
+    }
+
+    // Temporarily update the form data if using quotation data
+    const originalForm = { ...form };
+    const dataToUse = quotationData || form;
+
+    if (quotationData) {
+      setForm(quotationData);
+      // Wait for state update
+      setTimeout(() => generatePDF(dataToUse, element), 100);
+      return;
+    }
+
+    generatePDF(dataToUse, element);
+
+    function generatePDF(data: any, pdfElement: HTMLElement) {
+      // Clone the element to avoid modifying the original
+      const clonedElement = pdfElement.cloneNode(true) as HTMLElement;
+
+      // Add CSS override for unsupported color functions
+      const styleOverride = document.createElement('style');
+      styleOverride.textContent = `
+        * {
+          background-color: #ffffff !important;
+          color: #000000 !important;
+          border-color: #000000 !important;
+        }
+        .bg-gray-200 { background-color: #f3f4f6 !important; }
+        .text-sm { color: #000000 !important; }
+        .font-bold { font-weight: bold !important; }
+        .font-semibold { font-weight: 600 !important; }
+        @page { size: A4; margin: 0; }
+      `;
+      clonedElement.insertBefore(styleOverride, clonedElement.firstChild);
+
+      // Force recompute styles
+      clonedElement.style.display = 'block';
+      clonedElement.offsetHeight; // Trigger reflow
+
+      // Wait for images to load
+      const images = clonedElement.querySelectorAll("img");
+      const imagePromises = Array.from(images).map(img => {
+        return new Promise((resolve, reject) => {
+          if (img.complete) {
+            resolve(void 0);
+          } else {
+            img.onload = resolve;
+            img.onerror = reject;
+          }
+        });
+      });
+
+      Promise.all(imagePromises).then(() => {
+        try {
+          html2pdf()
+            .from(clonedElement)
+            .set({
+              margin: [0, 0, 0, 0],
+              filename: `quotation_${data.quotationNo.replace(/\//g, '_')}.pdf`,
+              image: { type: 'jpeg', quality: 0.98 },
+              html2canvas: {
+                scale: 2,
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff',
+                removeContainer: true,
+                foreignObjectRendering: false,
+                logging: false,
+                width: 794,
+                height: 2256, // Height for 2 pages (1123 * 2)
+                x: 0,
+                y: 0,
+                scrollX: 0,
+                scrollY: 0,
+              },
+              jsPDF: {
+                unit: 'px',
+                format: [794, 2256], // A4 width, 2 pages height
+                orientation: 'portrait'
+              },
+            })
+            .save()
+            .then(() => {
+              // Restore original form data
+              if (quotationData) {
+                setForm(originalForm);
+              }
+            });
+        } catch (error) {
+          console.error("Error generating PDF:", error);
+          alert("Failed to generate PDF. Please try again.");
+          // Restore original form data
+          if (quotationData) {
+            setForm(originalForm);
+          }
+        }
+      }).catch(() => {
+        alert("Failed to load images for PDF. Please try again.");
+        // Restore original form data
+        if (quotationData) {
+          setForm(originalForm);
+        }
+      });
+    }
   };
 
   return (
     <div className="bg-gray-200 p-6">
 
-      {/* 🔧 FORM */}
-      <div className="max-w-4xl mx-auto bg-white p-4 mb-6 shadow text-sm">
+      {/* 🔧 FORM - Only visible to admins */}
+      {!isEmployee && (
+        <div className="max-w-4xl mx-auto bg-white p-4 mb-6 shadow text-sm">
         <h2 className="font-bold mb-3">Edit Quotation</h2>
 
         <div className="grid grid-cols-2 gap-2">
@@ -143,13 +356,19 @@ export default function QuotationPage() {
           <input name="price" value={form.price} onChange={handleChange} placeholder="Price" className="border p-2"/>
         </div>
 
-        <button onClick={downloadPDF} className="mt-3 bg-black text-white px-4 py-2">
-          Download PDF
-        </button>
+        <div className="flex gap-4 mt-3">
+          <button onClick={() => downloadPDF()} className="bg-black text-white px-4 py-2">
+            Download PDF
+          </button>
+          <button onClick={handleSubmit} className="bg-blue-500 text-white px-4 py-2" disabled={isLoading}>
+            {isLoading ? 'Saving...' : 'Save Quotation'}
+          </button>
+        </div>
       </div>
+      )}
 
-      {/* 📄 PDF */}
-      <div className="flex justify-center">
+      {/* 📄 PDF - Always rendered but hidden for employees */}
+      <div className={`flex justify-center ${isEmployee ? 'hidden' : ''}`}>
         <div id="pdf-content" className="bg-white">
 
           {/* ================= PAGE 1 ================= */}
@@ -157,12 +376,12 @@ export default function QuotationPage() {
 
             {/* Watermark */}
             <div className="absolute inset-0 flex items-center justify-center opacity-10">
-              <Image src="/mgsolarlogo.png" alt="logo" width={400} height={400}/>
+              <img src="/mgsolarlogo.png" alt="logo" width={400} height={400}/>
             </div>
 
             {/* Header Image */}
             <div className="relative z-10">
-              <Image src="/mgsolarheader.png" alt="header" width={754} height={100} className="w-full" loading="eager"/>
+              <img src="/mgsolarheader.png" alt="header" width={754} height={100} className="w-full"/>
             </div>
 
             {/* TO SECTION */}
@@ -215,7 +434,7 @@ export default function QuotationPage() {
 
             {/* FOOTER PAGE 1 */}
             <div className="absolute bottom-6 left-10 right-10">
-              <Image src="/mgsolarfooter.png" alt="footer" width={754} height={50} className="w-full"/>
+              <img src="/mgsolarfooter.png" alt="footer" width={754} height={50} className="w-full"/>
             </div>
           </div>
 
@@ -227,12 +446,12 @@ export default function QuotationPage() {
 
             {/* Watermark */}
             <div className="absolute inset-0 flex items-center justify-center opacity-10">
-              <Image src="/mgsolarlogo.png" alt="logo" width={400} height={400}/>
+              <img src="/mgsolarlogo.png" alt="logo" width={400} height={400}/>
             </div>
 
             {/* Header Image */}
             <div className="relative z-10 mb-6">
-              <Image src="/mgsolarheader.png" alt="header" width={754} height={100} className="w-full" loading="eager"/>
+              <img src="/mgsolarheader.png" alt="header" width={754} height={100} className="w-full"/>
             </div>
 
             {/* PRICE BREAKUP */}
@@ -304,10 +523,85 @@ export default function QuotationPage() {
 
             {/* FOOTER PAGE 2 */}
             <div className="absolute bottom-6 left-10 right-10">
-              <Image src="/mgsolarfooter.png" alt="footer" width={754} height={50} className="w-full"/>
+              <img src="/mgsolarfooter.png" alt="footer" width={754} height={50} className="w-full"/>
             </div>
           </div>
         </div>
+      </div>
+
+      {/* QUOTATIONS TABLE - Visible to both admins and employees */}
+      <div className="max-w-7xl mx-auto bg-white p-6 shadow mt-6">
+        <h2 className="text-2xl font-bold mb-4">Saved Quotations</h2>
+
+        {/* Mobile View */}
+        <div className="block md:hidden space-y-4">
+          {quotations.map((quotation) => (
+            <div key={quotation.id} className="border rounded-lg p-4">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <h3 className="font-semibold">{quotation.customerName}</h3>
+                  <p className="text-sm text-gray-600">{quotation.quotationNo}</p>
+                </div>
+                <button
+                  onClick={() => downloadPDF(quotation)}
+                  className="bg-blue-500 text-white px-3 py-1 text-sm rounded"
+                >
+                  Print PDF
+                </button>
+              </div>
+              <div className="text-sm text-gray-600 space-y-1">
+                <p><span className="font-medium">Mobile:</span> {quotation.mobileNumber}</p>
+                <p><span className="font-medium">System:</span> {quotation.kilowatt} KW</p>
+                <p><span className="font-medium">Price:</span> ₹{quotation.price}</p>
+                <p><span className="font-medium">Date:</span> {new Date(quotation.createdAt).toLocaleDateString()}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden md:block">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Quotation No</TableHead>
+                <TableHead>Customer Name</TableHead>
+                <TableHead>Mobile</TableHead>
+                <TableHead>System</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead className="text-center">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {quotations.map((quotation) => (
+                <TableRow key={quotation.id}>
+                  <TableCell>{quotation.quotationNo}</TableCell>
+                  <TableCell>{quotation.customerName}</TableCell>
+                  <TableCell>{quotation.mobileNumber}</TableCell>
+                  <TableCell>{quotation.kilowatt} KW</TableCell>
+                  <TableCell>₹{quotation.price}</TableCell>
+                  <TableCell>{new Date(quotation.createdAt).toLocaleDateString()}</TableCell>
+                  <TableCell className="text-center">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        downloadPDF(quotation);
+                      }}
+                      className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
+                    >
+                      Print PDF
+                    </button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+
+        {quotations.length === 0 && (
+          <p className="text-center text-gray-500 py-8">No quotations saved yet.</p>
+        )}
       </div>
     </div>
   );

@@ -60,7 +60,7 @@ export default function AdminPaymentsPage() {
         if (employeeDataStr) {
           const empData = JSON.parse(employeeDataStr);
           // Filter customers created by this employee
-          filteredCustomers = allCustomers.filter((c: Customer) => c.createdBy === empData.id);
+          filteredCustomers = allCustomers.filter((c: Customer) => c.createdBy === empData.empId);
         }
 
         setCustomers(filteredCustomers);
@@ -91,7 +91,9 @@ export default function AdminPaymentsPage() {
       return;
     }
     try {
-      const found = await getCustomerByMobile(mobileNumber);
+      // Pass employee ID if user is an employee
+      const employeeId = employeeData ? employeeData.empId : undefined;
+      const found = await getCustomerByMobile(mobileNumber, employeeId);
       if (found) {
         setCustomer(found);
         setErrors({});
@@ -101,7 +103,7 @@ export default function AdminPaymentsPage() {
       }
     } catch (error) {
       console.error('Error fetching customer:', error);
-      if (error.name !== 'AbortError') {
+      if (!(error instanceof Error) || error.name !== 'AbortError') {
         setErrors({ mobile: 'Error fetching customer' });
         setCustomer(null);
       }

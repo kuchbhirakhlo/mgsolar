@@ -34,6 +34,8 @@ interface Installation {
   dcWireUsed: string;
   earthingWireUsed: string;
   panelSerialNumbers: string[];
+  frontLegHeight: string;
+  backLegHeight: string;
   photoUrl?: string;
   latitude?: number;
   longitude?: number;
@@ -61,6 +63,8 @@ export default function AdminInstallationsPage() {
     dcWireUsed: '',
     earthingWireUsed: '',
     panelSerialNumbers: [''],
+    frontLegHeight: '',
+    backLegHeight: '',
     specialNotes: '',
   });
   const [photo, setPhoto] = useState<File | null>(null);
@@ -178,6 +182,8 @@ export default function AdminInstallationsPage() {
       dcWireUsed: installation.dcWireUsed || '',
       earthingWireUsed: installation.earthingWireUsed || '',
       panelSerialNumbers: installation.panelSerialNumbers,
+      frontLegHeight: installation.frontLegHeight || '',
+      backLegHeight: installation.backLegHeight || '',
       specialNotes: installation.specialNotes,
     });
     setIsEditing(true);
@@ -223,6 +229,8 @@ export default function AdminInstallationsPage() {
           dcWireUsed: formData.dcWireUsed,
           earthingWireUsed: formData.earthingWireUsed,
           panelSerialNumbers: formData.panelSerialNumbers.filter(s => s.trim()),
+          frontLegHeight: formData.frontLegHeight,
+          backLegHeight: formData.backLegHeight,
           specialNotes: formData.specialNotes,
         };
         if (photoUrl !== undefined || selectedInstallation.photoUrl !== undefined) {
@@ -246,6 +254,8 @@ export default function AdminInstallationsPage() {
           dcWireUsed: formData.dcWireUsed,
           earthingWireUsed: formData.earthingWireUsed,
           panelSerialNumbers: formData.panelSerialNumbers.filter(s => s.trim()),
+          frontLegHeight: formData.frontLegHeight,
+          backLegHeight: formData.backLegHeight,
           specialNotes: formData.specialNotes,
           createdAt: new Date().toISOString(),
         };
@@ -262,15 +272,17 @@ export default function AdminInstallationsPage() {
         // Firestore onSnapshot will update the state automatically
       }
 
-      setFormData({
-        installerName: '',
-        inverterSerialNumber: '',
-        acWireUsed: '',
-        dcWireUsed: '',
-        earthingWireUsed: '',
-        panelSerialNumbers: [''],
-        specialNotes: '',
-      });
+                          setFormData({
+                            installerName: '',
+                            inverterSerialNumber: '',
+                            acWireUsed: '',
+                            dcWireUsed: '',
+                            earthingWireUsed: '',
+                            panelSerialNumbers: [''],
+                            frontLegHeight: '',
+                            backLegHeight: '',
+                            specialNotes: '',
+                          });
       setPhoto(null);
       setLocation(null);
       setCustomer(null);
@@ -409,6 +421,22 @@ export default function AdminInstallationsPage() {
                           onChange={(e) => setFormData({ ...formData, earthingWireUsed: e.target.value })}
                         />
                       </div>
+                      <div>
+                        <Label htmlFor="frontLegHeight">Front Leg Height</Label>
+                        <Input
+                          id="frontLegHeight"
+                          value={formData.frontLegHeight}
+                          onChange={(e) => setFormData({ ...formData, frontLegHeight: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="backLegHeight">Back Leg Height</Label>
+                        <Input
+                          id="backLegHeight"
+                          value={formData.backLegHeight}
+                          onChange={(e) => setFormData({ ...formData, backLegHeight: e.target.value })}
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -475,15 +503,17 @@ export default function AdminInstallationsPage() {
                         setSelectedInstallation(null);
                         setCustomer(null);
                         setMobileNumber('');
-                         setFormData({
-                           installerName: '',
-                           inverterSerialNumber: '',
-                           acWireUsed: '',
-                           dcWireUsed: '',
-                           earthingWireUsed: '',
-                           panelSerialNumbers: [''],
-                           specialNotes: '',
-                         });
+      setFormData({
+        installerName: '',
+        inverterSerialNumber: '',
+        acWireUsed: '',
+        dcWireUsed: '',
+        earthingWireUsed: '',
+        panelSerialNumbers: [''],
+        frontLegHeight: '',
+        backLegHeight: '',
+        specialNotes: '',
+      });
                         setPhoto(null);
                         setLocation(null);
                         setErrors({});
@@ -599,6 +629,8 @@ export default function AdminInstallationsPage() {
               <div><strong>AC Wire Used:</strong> {selectedInstallation.acWireUsed}</div>
               <div><strong>DC Wire Used:</strong> {selectedInstallation.dcWireUsed}</div>
               <div><strong>Earthing Wire Used:</strong> {selectedInstallation.earthingWireUsed}</div>
+              <div><strong>Front Leg Height:</strong> {selectedInstallation.frontLegHeight}</div>
+              <div><strong>Back Leg Height:</strong> {selectedInstallation.backLegHeight}</div>
               <div><strong>Panel Serials:</strong> {selectedInstallation.panelSerialNumbers.join(', ')}</div>
               <div><strong>Special Notes:</strong> {selectedInstallation.specialNotes}</div>
               <div><strong>Date:</strong> {new Date(selectedInstallation.createdAt).toLocaleDateString()}</div>

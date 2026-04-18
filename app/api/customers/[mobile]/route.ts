@@ -5,9 +5,17 @@ import { db } from '@/lib/firebase';
 export async function GET(request: Request, { params }: { params: Promise<{ mobile: string }> }) {
   try {
     const { mobile } = await params;
+    const { searchParams } = new URL(request.url);
+    const employeeId = searchParams.get('employeeId');
 
     const customersRef = collection(db, 'customers');
-    const q = query(customersRef, where('mobileNumber', '==', mobile));
+    let q = query(customersRef, where('mobileNumber', '==', mobile));
+
+    // If employee ID is provided, filter by createdBy field as well
+    if (employeeId) {
+      q = query(customersRef, where('mobileNumber', '==', mobile), where('createdBy', '==', employeeId));
+    }
+
     const snapshot = await getDocs(q);
 
     if (snapshot.empty) {

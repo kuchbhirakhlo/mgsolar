@@ -40,7 +40,37 @@ export default function AdminMaterialDispatchPage() {
   const [mobileNumber, setMobileNumber] = useState('');
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [billNumber, setBillNumber] = useState('');
-  const [data, setData] = useState<{name: string, value: string}[]>(Array(20).fill({name: '', value: ''}));
+  const materials = [
+    'Rufter',
+    'Perlin',
+    'Base plate',
+    'Fasstner',
+    'Cable trey',
+    'Nut bolt',
+    'Pipe',
+    'Clip',
+    'Elbow',
+    'Acdb',
+    'Dcdb',
+    'Cbr',
+    'L A',
+    'Chemicsl bag',
+    'MC4 connector',
+    'Universal clamp',
+    'cable tie',
+    'inverter',
+    'panel',
+    'wire ac',
+    'wire dc',
+    'wire earthing',
+    'tape'
+  ];
+  const fixedCount = materials.length;
+  const emptyCount = 5;
+  const [data, setData] = useState<{name: string, value: string}[]>([
+    ...materials.map(name => ({name, value: ''})),
+    ...Array(emptyCount).fill({name: '', value: ''})
+  ]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
 
@@ -139,7 +169,10 @@ export default function AdminMaterialDispatchPage() {
         });
       }
 
-      setData(Array(20).fill({name: '', value: ''}));
+                        setData([
+                          ...materials.map(name => ({name, value: ''})),
+                          ...Array(emptyCount).fill({name: '', value: ''})
+                        ]);
       setCustomer(null);
       setMobileNumber('');
       setBillNumber('');
@@ -240,6 +273,7 @@ export default function AdminMaterialDispatchPage() {
                               placeholder="Material Name"
                               value={item.name}
                               onChange={(e) => updateData(index, { ...item, name: e.target.value })}
+                              readOnly={index < fixedCount}
                             />
                           </div>
                           <div>
@@ -275,7 +309,10 @@ export default function AdminMaterialDispatchPage() {
                         setCustomer(null);
                         setMobileNumber('');
                         setBillNumber('');
-                        setData(Array(20).fill({name: '', value: ''}));
+      setData([
+        ...materials.map(name => ({name, value: ''})),
+        ...Array(emptyCount).fill({name: '', value: ''})
+      ]);
                         setErrors({});
                       }}
                       variant="outline"
