@@ -365,7 +365,8 @@ export default function AdminCustomersPage() {
           const { assignedEmployee, ...customerData } = formData;
           const newCustomerData = {
             ...customerData,
-            createdBy: assignedEmployee || employeeData?.empId || 'admin',
+            ...(assignedEmployee && assignedEmployee !== 'admin' && { createdBy: assignedEmployee }),
+            ...(!assignedEmployee && employeeData?.empId && { createdBy: employeeData.empId }),
           };
           console.log('New customer data:', newCustomerData);
           const docRef = await addDoc(collection(db, 'customers'), newCustomerData);
@@ -602,7 +603,7 @@ export default function AdminCustomersPage() {
                          <SelectValue placeholder="Select employee (optional)" />
                        </SelectTrigger>
                        <SelectContent>
-                         <SelectItem value="">None (Admin only)</SelectItem>
+                         <SelectItem value="admin">Admin only</SelectItem>
                          {employees.map((emp) => (
                            <SelectItem key={emp.id} value={emp.empId}>
                              {emp.name} ({emp.empId})
