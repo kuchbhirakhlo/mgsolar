@@ -130,24 +130,8 @@ export async function deleteFile(fileUrl: string) {
 
 // Employees
 export async function addEmployee(employee: Omit<Employee, 'id'>) {
-  // Create Firebase Auth user if email is provided
-  let firebaseUid: string | undefined;
-  if (employee.email) {
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, employee.email, employee.password);
-      firebaseUid = userCredential.user.uid;
-
-      // Send password reset email
-      await sendPasswordResetEmail(auth, employee.email);
-    } catch (error) {
-      console.error('Error creating Firebase Auth user:', error);
-      throw new Error('Failed to create authentication account');
-    }
-  }
-
   const docRef = await addDoc(collection(db, 'employees'), {
     ...employee,
-    firebaseUid,
     createdAt: new Date(),
   })
   return docRef.id

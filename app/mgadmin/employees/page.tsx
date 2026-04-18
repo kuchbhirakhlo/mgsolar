@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Users, Plus, Ban, CheckCircle, Edit, Eye, Key } from 'lucide-react';
+import { Users, Plus, Ban, CheckCircle, Edit, Eye, Key, EyeOff } from 'lucide-react';
 import { addEmployee, getEmployees, blockEmployee, updateEmployee, getEmployeeByEmpId, resetEmployeePassword } from '@/lib/firebase-service';
 import type { Employee } from '@/lib/types';
 
@@ -28,9 +28,10 @@ export default function EmployeesPage() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<(Employee & { id: string }) | null>(null);
   const [viewingEmployee, setViewingEmployee] = useState<(Employee & { id: string }) | null>(null);
-  const [editData, setEditData] = useState({ empId: '', role: 'employee' as 'employee' | 'engineer' });
+  const [editData, setEditData] = useState({ empId: '', role: 'employee' as 'employee' | 'engineer', mobileNumber: '', name: '', email: '' });
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
@@ -126,7 +127,7 @@ export default function EmployeesPage() {
 
   const handleEdit = (employee: Employee & { id: string }) => {
     setEditingEmployee(employee);
-    setEditData({ empId: employee.empId, role: employee.role });
+    setEditData({ empId: employee.empId, role: employee.role, mobileNumber: employee.mobileNumber, name: employee.name, email: employee.email || '' });
     setEditError(null);
   };
 
@@ -145,7 +146,13 @@ export default function EmployeesPage() {
         }
       }
 
-      await updateEmployee(editingEmployee.id, { empId: editData.empId, role: editData.role });
+      await updateEmployee(editingEmployee.id, {
+        empId: editData.empId,
+        role: editData.role,
+        mobileNumber: editData.mobileNumber,
+        name: editData.name,
+        email: editData.email || undefined
+      });
       setEditingEmployee(null);
       loadEmployees(0);
     } catch (error: any) {
@@ -212,7 +219,7 @@ export default function EmployeesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Email (Optional)</label>
+                  <label className="block text-sm font-medium mb-1">Email</label>
                   <Input
                     type="email"
                     value={formData.email}
@@ -242,13 +249,23 @@ export default function EmployeesPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Password</label>
-                  <Input
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder="Enter password"
-                    required
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      placeholder="Enter password"
+                      required
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Role</label>
@@ -466,25 +483,52 @@ export default function EmployeesPage() {
           </DialogHeader>
           {editingEmployee && (
             <form onSubmit={handleEditSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Employee ID</label>
-                <Input
-                  value={editData.empId}
-                  onChange={(e) => setEditData({ ...editData, empId: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Role</label>
-                <Select value={editData.role} onValueChange={(value: 'employee' | 'engineer') => setEditData({ ...editData, role: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="employee">Employee</SelectItem>
-                    <SelectItem value="engineer">Engineer</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Employee ID</label>
+                  <Input
+                    value={editData.empId}
+                    onChange={(e) => setEditData({ ...editData, empId: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Role</label>
+                  <Select value={editData.role} onValueChange={(value: 'employee' | 'engineer') => setEditData({ ...editData, role: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="employee">Employee</SelectItem>
+                      <SelectItem value="engineer">Engineer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Name</label>
+                  <Input
+                    value={editData.name}
+                    onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Mobile Number</label>
+                  <Input
+                    type="tel"
+                    value={editData.mobileNumber}
+                    onChange={(e) => setEditData({ ...editData, mobileNumber: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium mb-1">Email (Optional)</label>
+                  <Input
+                    type="email"
+                    value={editData.email}
+                    onChange={(e) => setEditData({ ...editData, email: e.target.value })}
+                  />
+                </div>
               </div>
               {editError && (
                 <p className="text-red-500 text-sm">{editError}</p>

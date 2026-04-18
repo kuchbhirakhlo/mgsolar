@@ -3,9 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { getEmployeeByFirebaseUid, getEmployeeByEmpId } from '@/lib/firebase-service';
+import { Eye, EyeOff } from 'lucide-react';
+import { getEmployeeByEmpId } from '@/lib/firebase-service';
 import { PWAInstall } from '@/app/components/pwa-install';
 
 export default function EmployeeLogin() {
@@ -14,6 +13,7 @@ export default function EmployeeLogin() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,28 +21,27 @@ export default function EmployeeLogin() {
     setLoading(true);
 
     try {
-      let emailToUse = loginId;
+      let employeeData;
 
       // If loginId doesn't contain @, treat as employee ID
       if (!loginId.includes('@')) {
-        const employeeData = await getEmployeeByEmpId(loginId);
-        if (!employeeData || !employeeData.email) {
-          setError('Invalid Employee ID or email');
-          setLoading(false);
-          return;
-        }
-        emailToUse = employeeData.email;
+        employeeData = await getEmployeeByEmpId(loginId);
+      } else {
+        // If it's an email, we need a function to get by email, but for now assume empId
+        setError('Please use Employee ID to login');
+        setLoading(false);
+        return;
       }
 
-      // Sign in with Firebase Auth
-      const userCredential = await signInWithEmailAndPassword(auth, emailToUse, password);
-      const firebaseUid = userCredential.user.uid;
-
-      // Get employee data from Firestore
-      const employeeData = await getEmployeeByFirebaseUid(firebaseUid);
-
       if (!employeeData) {
-        setError('Employee account not found.');
+        setError('Invalid Employee ID');
+        setLoading(false);
+        return;
+      }
+
+      // Check password
+      if (employeeData.password !== password) {
+        setError('Invalid password');
         setLoading(false);
         return;
       }
@@ -53,19 +52,13 @@ export default function EmployeeLogin() {
         return;
       }
 
-      if (employeeData.role !== 'employee') {
-        setError('Access denied. This login is for engineers only.');
-        setLoading(false);
-        return;
-      }
-
       // Store auth data in session storage
       const sessionData = {
         empId: employeeData.empId,
         name: employeeData.name,
         role: employeeData.role,
         isBlocked: employeeData.isBlocked,
-        firebaseUid: firebaseUid
+        id: employeeData.id
       };
 
       sessionStorage.setItem('employeeLoggedIn', 'true');
@@ -75,11 +68,7 @@ export default function EmployeeLogin() {
       router.push('/mgadmin/customers');
     } catch (err: any) {
       console.error('Login error:', err);
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-email') {
-        setError('Invalid Employee ID, email or password');
-      } else {
-        setError('Login failed. Please try again.');
-      }
+      setError('Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -117,14 +106,23 @@ export default function EmployeeLogin() {
 
           <div>
             <label className="block text-sm font-medium mb-1">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="Enter password"
-              required
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 pr-12 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Enter password"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
 
           {error && (
