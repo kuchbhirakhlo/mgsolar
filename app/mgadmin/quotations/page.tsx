@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import html2pdf from "html2pdf.js";
 import { db, storage } from '@/lib/firebase';
@@ -30,6 +30,7 @@ export default function QuotationPage() {
   const [isEmployee, setIsEmployee] = useState(false);
   const [employeeData, setEmployeeData] = useState<any>(null);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const [form, setForm] = useState({
     quotationNo: "",
@@ -110,13 +111,17 @@ export default function QuotationPage() {
 
   const fetchCustomer = async () => {
     if (form.mobileNumber.length === 10) {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      abortControllerRef.current = new AbortController();
       try {
         // Build URL with employee ID if user is an employee
         const url = employeeData
           ? `/api/customers/${form.mobileNumber}?employeeId=${employeeData.empId}`
           : `/api/customers/${form.mobileNumber}`;
 
-        const response = await fetch(url);
+        const response = await fetch(url, { signal: abortControllerRef.current.signal });
         const data = await response.json();
         if (data.success) {
           const customer = data.customer;
@@ -187,6 +192,12 @@ export default function QuotationPage() {
 
   const handleSubmit = async () => {
     const submitQuotation = async () => {
+      // Check if quotation already exists for this mobile number
+      const existingQuotation = await getDocs(query(collection(db, 'quotations'), where('mobileNumber', '==', form.mobileNumber)));
+      if (!existingQuotation.empty) {
+        throw new Error('A quotation already exists for this mobile number.');
+      }
+
       const quotationData = {
         ...form,
         createdAt: new Date().toISOString(),
@@ -250,12 +261,22 @@ export default function QuotationPage() {
           background-color: #ffffff !important;
           color: #000000 !important;
           border-color: #000000 !important;
+          font-family: Arial, sans-serif !important;
+          word-break: break-word !important;
+          overflow-wrap: break-word !important;
+          white-space: normal !important;
         }
+        p {
+          margin: 0 !important;
+          padding: 0 !important;
+          line-height: 1.4 !important;
+        }
+        .bg-white { background-color: #ffffff !important; }
         .bg-gray-200 { background-color: #f3f4f6 !important; }
         .bg-gray-50 { background-color: #f9fafb !important; }
-        .text-sm { color: #000000 !important; }
-        .font-bold { font-weight: bold !important; }
-        .font-semibold { font-weight: 600 !important; }
+        .text-gray-600 { color: #4b5563 !important; }
+        .border { border-color: #000000 !important; }
+        .border-gray-300 { border-color: #d1d5db !important; }
         @page { size: A4; margin: 0; }
       `;
       clonedElement.insertBefore(styleOverride, clonedElement.firstChild);
@@ -289,7 +310,6 @@ export default function QuotationPage() {
                 scale: 2,
                 useCORS: true,
                 allowTaint: true,
-                backgroundColor: '#ffffff',
                 removeContainer: true,
                 foreignObjectRendering: false,
                 logging: false,
@@ -306,8 +326,21 @@ export default function QuotationPage() {
                 orientation: 'portrait'
               },
             })
-            .save()
-            .then(() => {
+            .outputPdf('blob')
+            .then((pdfBlob) => {
+              const url = URL.createObjectURL(pdfBlob);
+              const printWindow = window.open(url, '_blank');
+              if (!printWindow) {
+                alert('Failed to open print window. Please allow popups.');
+              }
+              // Restore original form data
+              if (quotationData) {
+                setForm(originalForm);
+              }
+            })
+            .catch((error) => {
+              console.error("Error printing PDF:", error);
+              alert("Failed to print PDF. Please try again.");
               // Restore original form data
               if (quotationData) {
                 setForm(originalForm);
@@ -321,7 +354,8 @@ export default function QuotationPage() {
             setForm(originalForm);
           }
         }
-      }).catch(() => {
+      }).catch((error) => {
+        console.error("Error loading images:", error);
         alert("Failed to load images for PDF. Please try again.");
         // Restore original form data
         if (quotationData) {
@@ -359,7 +393,7 @@ export default function QuotationPage() {
 
         <div className="flex gap-4 mt-3">
           <button onClick={() => downloadPDF()} className="bg-black text-white px-4 py-2">
-            Download PDF
+            Print PDF
           </button>
           <button onClick={handleSubmit} className="bg-blue-500 text-white px-4 py-2" disabled={isLoading}>
             {isLoading ? 'Saving...' : 'Save Quotation'}
@@ -373,7 +407,7 @@ export default function QuotationPage() {
         <div id="pdf-content" className="bg-white">
 
           {/* ================= PAGE 1 ================= */}
-          <div className="w-[794px] h-[1123px] p-10 relative border-2 border-black">
+          <div className="w-[794px] h-[1123px] p-10 relative">
 
             {/* Watermark */}
             <div className="absolute inset-0 flex items-center justify-center opacity-10">
@@ -443,7 +477,7 @@ export default function QuotationPage() {
           <div className="h-8"></div>
 
           {/* ================= PAGE 2 ================= */}
-          <div className="w-[794px] h-[1123px] p-10 relative border-2 border-black">
+          <div className="w-[794px] h-[1123px] p-10 relative">
 
             {/* Watermark */}
             <div className="absolute inset-0 flex items-center justify-center opacity-10">
@@ -476,37 +510,34 @@ export default function QuotationPage() {
             </div>
 
             {/* TERMS AND BANK SIDE BY SIDE */}
-            <div className="flex gap-4 mt-6">
+            <div className="flex gap-4">
               <div className="flex-1 text-sm">
                 <h2 className="font-semibold">TERMS & CONDITIONS</h2>
                 <p>Validity of quotation: 15 days</p>
                 <p>Installation Timeline: 15–25 Working Days</p>
                 <p>Net metering subject to DISCOM approval.</p>
-                <p>System generation depends on sunlight & site conditions. Payment Terms: 70% Advance, 20% Before Installation, 10% After Commissioning</p>
+                <p>System generation depends on sunlight & site conditions.</p>
+                <p>Payment Terms: 70% Advance, 20% Before Installation, 10% After Commissioning</p>
                 <p>Operation & maintenance charges are not included in this price.</p>
               </div>
 
               <div className="flex-1 text-sm border border-gray-300 p-2 bg-gray-50">
                 <h2 className="font-bold">Company Bank Details</h2>
-                <span className="font-bold">
                 <p>Bank Name: Punjab National Bank</p>
                 <p>Account No.: 6193002100003379</p>
                 <p>IFSC: PUNB0619300</p>
                 <p>Branch: Vibhuti Khand, Gomti Nagar, Lucknow</p>
-                </span>
               </div>
             </div>
 
             {/* DECLARATION */}
             <div className="mt-6 text-sm">
               <h2 className="font-semibold">DECLARATION</h2>
-              <p>
-              We hereby declare that the above quotation is true and correct. 
-              All materials supplied will be new and of standard quality. 
-              Installation will be carried out as per site conditions and applicable norms. 
-              Warranties shall be as per manufacturer terms. 
-              Prices and approvals are subject to applicable rules and regulations.
-              </p>
+              <p>We hereby declare that the above quotation is true and correct.</p>
+              <p>All materials supplied will be new and of standard quality.</p>
+              <p>Installation will be carried out as per site conditions and applicable norms.</p>
+              <p>Warranties shall be as per manufacturer terms.</p>
+              <p>Prices and approvals are subject to applicable rules and regulations.</p>
             </div>
 
             {/* SIGNATURE */}

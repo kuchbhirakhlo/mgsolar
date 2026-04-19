@@ -73,6 +73,7 @@ export default function AdminCustomersPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [viewDialog, setViewDialog] = useState(false);
+  const [selectedEmployeeFilter, setSelectedEmployeeFilter] = useState<string>('all');
   const { isLoading, submitForm } = useFormSubmit();
   const [formData, setFormData] = useState({
     systemType: '',
@@ -156,6 +157,8 @@ export default function AdminCustomersPage() {
 
     return () => unsubscribe();
   }, []);
+
+  const filteredCustomers = isEmployee ? customers : (selectedEmployeeFilter !== 'all' ? customers.filter(c => c.createdBy === selectedEmployeeFilter) : customers);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -267,7 +270,7 @@ export default function AdminCustomersPage() {
           <div class="header-info">
             <h1>MG Solar - Customer Data Report</h1>
             <p>Generated on: ${new Date().toLocaleDateString()}</p>
-            <p>Total Customers: ${customers.length}</p>
+            <p>Total Customers: ${filteredCustomers.length}</p>
           </div>
 
           <table>
@@ -286,7 +289,7 @@ export default function AdminCustomersPage() {
               </tr>
             </thead>
             <tbody>
-              ${customers.map(customer => `
+              ${filteredCustomers.map(customer => `
                 <tr>
                   <td>${customer.systemType || ''}</td>
                   <td>${customer.customerName || ''}</td>
@@ -776,6 +779,34 @@ export default function AdminCustomersPage() {
         </Card>
       )}
 
+      {!isEmployee && (
+        <Card className="border-muted">
+          <CardHeader>
+            <CardTitle>Filter Customers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4 items-end">
+              <div className="flex-1 max-w-xs">
+                <Label htmlFor="employeeFilter">Filter by Employee</Label>
+                <Select value={selectedEmployeeFilter} onValueChange={setSelectedEmployeeFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Customers" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Customers</SelectItem>
+                    {employees.map((emp) => (
+                      <SelectItem key={emp.id} value={emp.empId}>
+                        {emp.name} ({emp.empId})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="border-muted">
         <CardHeader>
           <CardTitle>Customer List</CardTitle>
@@ -783,7 +814,7 @@ export default function AdminCustomersPage() {
         <CardContent>
           {/* Mobile Card View */}
           <div className="block md:hidden space-y-4">
-            {customers.map((customer) => (
+            {filteredCustomers.map((customer) => (
               <Card key={customer.id} className="border">
                 <CardContent className="p-4">
                   <div className="space-y-2">
@@ -833,7 +864,7 @@ export default function AdminCustomersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {customers.map((customer) => (
+                {filteredCustomers.map((customer) => (
                   <TableRow key={customer.id}>
                     <TableCell>{customer.systemType}</TableCell>
                     <TableCell>{customer.customerName}</TableCell>

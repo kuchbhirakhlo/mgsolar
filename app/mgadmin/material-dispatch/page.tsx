@@ -298,6 +298,10 @@ export default function AdminMaterialDispatchPage() {
                     </div>
                   </div>
 
+                  <div className="border-t pt-4">
+                    <h4 className="text-md font-semibold mb-2">Total Price: ₹{data.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0).toFixed(2)}</h4>
+                  </div>
+
                   <div className="flex gap-4">
                     <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={isLoading}>
                       {isLoading ? (
@@ -432,6 +436,7 @@ export default function AdminMaterialDispatchPage() {
                   </div>
                 ))}
               </div>
+              <div><strong>Total Price:</strong> ₹{selectedDispatch.data.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0).toFixed(2)}</div>
               <div><strong>Date:</strong> {new Date(selectedDispatch.createdAt).toLocaleDateString()}</div>
             </div>
           )}
