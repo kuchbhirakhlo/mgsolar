@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Eye, EyeOff } from 'lucide-react';
-import { getEmployeeByEmpId } from '@/lib/firebase-service';
+import { getEmployeeByEmpId, getEmployeeByMobile } from '@/lib/firebase-service';
 import { PWAInstall } from '@/app/components/pwa-install';
 
 export default function EmployeeLogin() {
@@ -23,14 +23,11 @@ export default function EmployeeLogin() {
     try {
       let employeeData;
 
-      // If loginId doesn't contain @, treat as employee ID
-      if (!loginId.includes('@')) {
-        employeeData = await getEmployeeByEmpId(loginId);
+      // If loginId is a 10-digit number, treat as mobile, else employee ID
+      if (/^\d{10}$/.test(loginId)) {
+        employeeData = await getEmployeeByMobile(loginId);
       } else {
-        // If it's an email, we need a function to get by email, but for now assume empId
-        setError('Please use Employee ID to login');
-        setLoading(false);
-        return;
+        employeeData = await getEmployeeByEmpId(loginId);
       }
 
       if (!employeeData) {
@@ -68,7 +65,9 @@ export default function EmployeeLogin() {
       router.push('/mgadmin/customers');
     } catch (err: any) {
       console.error('Login error:', err);
-      setError('Login failed. Please try again.');
+      if (err.name !== 'AbortError') {
+        setError('Login failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -93,13 +92,13 @@ export default function EmployeeLogin() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Employee ID or Email</label>
+            <label className="block text-sm font-medium mb-1">Employee ID or Mobile Number</label>
             <input
               type="text"
               value={loginId}
               onChange={(e) => setLoginId(e.target.value)}
               className="w-full px-4 py-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="Enter employee ID or email"
+              placeholder="Enter employee ID or mobile number"
               required
             />
           </div>
@@ -146,7 +145,7 @@ export default function EmployeeLogin() {
         {/* Login Note */}
         <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
           <p className="text-sm text-blue-800">
-            Use your Employee ID or email address and password provided by the admin to log in. Contact admin if you need assistance.
+            Use your Employee ID or mobile number and password provided by the admin to log in. Contact admin if you need assistance.
           </p>
         </div>
 

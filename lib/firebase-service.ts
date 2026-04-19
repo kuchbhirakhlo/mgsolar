@@ -138,27 +138,35 @@ export async function addEmployee(employee: Omit<Employee, 'id'>) {
   return docRef.id
 }
 
-export async function getEmployees() {
+export async function getEmployees(signal?: AbortSignal) {
   try {
     console.log('Fetching employees from Firestore...')
     // Temporarily remove orderBy and limit to test
     const querySnapshot = await getDocs(collection(db, 'employees'))
     console.log('Query snapshot:', querySnapshot)
     console.log('Number of docs:', querySnapshot.size)
-    const employees = querySnapshot.docs.map((doc) => ({
+    const employees = querySnapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data(),
+      ...doc.data()
     })) as (Employee & { id: string })[]
     console.log('Employees data:', employees)
     return employees
   } catch (error) {
-    console.error('Firebase getEmployees error:', error)
-    throw new Error('Failed to fetch employees from database')
+    console.error('Error in getEmployees:', error)
+    throw error
   }
 }
 
 export async function getEmployeeByEmpId(empId: string): Promise<(Employee & { id: string }) | null> {
   const q = query(collection(db, 'employees'), where('empId', '==', empId))
+  const querySnapshot = await getDocs(q)
+  if (querySnapshot.empty) return null
+  const doc = querySnapshot.docs[0]
+  return { id: doc.id, ...doc.data() } as Employee & { id: string }
+}
+
+export async function getEmployeeByMobile(mobileNumber: string): Promise<(Employee & { id: string }) | null> {
+  const q = query(collection(db, 'employees'), where('mobileNumber', '==', mobileNumber))
   const querySnapshot = await getDocs(q)
   if (querySnapshot.empty) return null
   const doc = querySnapshot.docs[0]

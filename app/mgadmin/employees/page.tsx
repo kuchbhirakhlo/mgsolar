@@ -7,9 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Users, Plus, Ban, CheckCircle, Edit, Eye, Key, EyeOff } from 'lucide-react';
-import { addEmployee, getEmployees, blockEmployee, updateEmployee, getEmployeeByEmpId, resetEmployeePassword } from '@/lib/firebase-service';
+import { addEmployee, getEmployees, blockEmployee, updateEmployee, getEmployeeByEmpId } from '@/lib/firebase-service';
 import type { Employee } from '@/lib/types';
 
 export default function EmployeesPage() {
@@ -21,17 +21,18 @@ export default function EmployeesPage() {
   const [formData, setFormData] = useState({
     mobileNumber: '',
     name: '',
-    email: '',
     password: '',
     empId: '',
-    role: 'employee' as 'employee' | 'engineer',
+    role: 'employee' as 'employee' | 'installer',
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+
+
   const [editingEmployee, setEditingEmployee] = useState<(Employee & { id: string }) | null>(null);
   const [viewingEmployee, setViewingEmployee] = useState<(Employee & { id: string }) | null>(null);
-  const [editData, setEditData] = useState({ empId: '', role: 'employee' as 'employee' | 'engineer', mobileNumber: '', name: '', email: '' });
+  const [editData, setEditData] = useState({ empId: '', role: 'employee' as 'employee' | 'installer', mobileNumber: '', name: '', password: '' });
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
@@ -44,6 +45,37 @@ export default function EmployeesPage() {
     loadEmployees();
   }, [router]);
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      // Check if employee ID already exists
+      const existingEmployee = await getEmployeeByEmpId(formData.empId);
+      if (existingEmployee) {
+        setSubmitError('Employee ID already exists. Please choose a different ID.');
+        return;
+      }
+
+      await addEmployee({
+        ...formData,
+        isBlocked: false,
+      });
+      setFormData({ mobileNumber: '', name: '', password: '', empId: '', role: 'employee' });
+      setShowForm(false);
+      // Reload data after creation
+      loadEmployees(0);
+    } catch (error: any) {
+      console.error('Error adding employee:', error);
+      // Don't show error for aborted requests (user navigated away)
+      if (error.name !== 'AbortError') {
+        setSubmitError(error.message || 'Failed to create employee. Please try again.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const loadEmployees = async (retryCount = 0) => {
     console.log('loadEmployees called, retryCount:', retryCount)
     if (loading) return; // Prevent concurrent calls
@@ -51,13 +83,15 @@ export default function EmployeesPage() {
     setError(null);
     console.log('Starting to fetch employees...')
 
+    const abortController = new AbortController();
+
     try {
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Request timeout')), 30000)
       );
 
-      const dataPromise = getEmployees();
+      const dataPromise = getEmployees(abortController.signal);
       const data = await Promise.race([dataPromise, timeoutPromise]) as (Employee & { id: string })[];
 
       setEmployees(data);
@@ -65,7 +99,7 @@ export default function EmployeesPage() {
       console.error('Error loading employees:', error);
 
       // Don't show error for aborted requests
-      if (error.name === 'AbortError') {
+      if (error.name === 'AbortError' || abortController.signal.aborted) {
         return;
       }
 
@@ -84,36 +118,7 @@ export default function EmployeesPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setSubmitError(null);
-    try {
-      // Check if employee ID already exists
-      const existingEmployee = await getEmployeeByEmpId(formData.empId);
-      if (existingEmployee) {
-        setSubmitError('Employee ID already exists. Please choose a different ID.');
-        return;
-      }
 
-      await addEmployee({
-        ...formData,
-        isBlocked: false,
-      });
-      setFormData({ mobileNumber: '', name: '', email: '', password: '', empId: '', role: 'employee' });
-      setShowForm(false);
-      // Reload data after creation
-      loadEmployees(0);
-    } catch (error: any) {
-      console.error('Error adding employee:', error);
-      // Don't show error for aborted requests (user navigated away)
-      if (error.name !== 'AbortError') {
-        setSubmitError(error.message || 'Failed to create employee. Please try again.');
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const handleBlockToggle = async (id: string, currentStatus: boolean) => {
     try {
@@ -127,7 +132,7 @@ export default function EmployeesPage() {
 
   const handleEdit = (employee: Employee & { id: string }) => {
     setEditingEmployee(employee);
-    setEditData({ empId: employee.empId, role: employee.role, mobileNumber: employee.mobileNumber, name: employee.name, email: employee.email || '' });
+    setEditData({ empId: employee.empId, role: employee.role, mobileNumber: employee.mobileNumber, name: employee.name, password: employee.password });
     setEditError(null);
   };
 
@@ -151,7 +156,7 @@ export default function EmployeesPage() {
         role: editData.role,
         mobileNumber: editData.mobileNumber,
         name: editData.name,
-        email: editData.email || undefined
+        password: editData.password
       });
       setEditingEmployee(null);
       loadEmployees(0);
@@ -176,16 +181,7 @@ export default function EmployeesPage() {
     setViewingEmployee(null);
   };
 
-  const handleResetPassword = async (id: string) => {
-    try {
-      await resetEmployeePassword(id);
-      // Optionally show success message or reload
-      alert('Password reset to default (password123)');
-    } catch (error) {
-      console.error('Error resetting password:', error);
-      alert('Failed to reset password');
-    }
-  };
+
 
   return (
     <div className="space-y-6">
@@ -216,15 +212,6 @@ export default function EmployeesPage() {
                     onChange={(e) => setFormData({ ...formData, mobileNumber: e.target.value })}
                     placeholder="Enter mobile number"
                     required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Email</label>
-                  <Input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="Enter email address"
                   />
                 </div>
                 <div>
@@ -269,13 +256,13 @@ export default function EmployeesPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Role</label>
-                  <Select value={formData.role} onValueChange={(value: 'employee' | 'engineer') => setFormData({ ...formData, role: value })}>
+                  <Select value={formData.role} onValueChange={(value: 'employee' | 'installer') => setFormData({ ...formData, role: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="employee">Employee</SelectItem>
-                      <SelectItem value="engineer">Engineer</SelectItem>
+                      <SelectItem value="installer">Installer</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -359,15 +346,7 @@ export default function EmployeesPage() {
                             <Eye className="w-3 h-3 mr-1" />
                             View
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => handleResetPassword(emp.id)}
-                            className="flex-1 min-w-0"
-                          >
-                            <Key className="w-3 h-3 mr-1" />
-                            Reset
-                          </Button>
+
                           <Button
                             size="sm"
                             variant={emp.isBlocked ? 'default' : 'destructive'}
@@ -436,14 +415,7 @@ export default function EmployeesPage() {
                             >
                               <Eye className="w-3 h-3" />
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={() => handleResetPassword(emp.id)}
-                              title="Reset Password"
-                            >
-                              <Key className="w-3 h-3" />
-                            </Button>
+
                             <Button
                               size="sm"
                               variant={emp.isBlocked ? 'default' : 'destructive'}
@@ -480,56 +452,58 @@ export default function EmployeesPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Employee Details</DialogTitle>
+            <DialogDescription>Update the employee information below.</DialogDescription>
           </DialogHeader>
           {editingEmployee && (
             <form onSubmit={handleEditSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Employee ID</label>
-                  <Input
-                    value={editData.empId}
-                    onChange={(e) => setEditData({ ...editData, empId: e.target.value })}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Role</label>
-                  <Select value={editData.role} onValueChange={(value: 'employee' | 'engineer') => setEditData({ ...editData, role: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="employee">Employee</SelectItem>
-                      <SelectItem value="engineer">Engineer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Name</label>
-                  <Input
-                    value={editData.name}
-                    onChange={(e) => setEditData({ ...editData, name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Mobile Number</label>
-                  <Input
-                    type="tel"
-                    value={editData.mobileNumber}
-                    onChange={(e) => setEditData({ ...editData, mobileNumber: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">Email (Optional)</label>
-                  <Input
-                    type="email"
-                    value={editData.email}
-                    onChange={(e) => setEditData({ ...editData, email: e.target.value })}
-                  />
-                </div>
-              </div>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div>
+                   <label className="block text-sm font-medium mb-1">Employee ID</label>
+                   <Input
+                     value={editData.empId}
+                     onChange={(e) => setEditData({ ...editData, empId: e.target.value })}
+                     required
+                   />
+                 </div>
+                 <div>
+                   <label className="block text-sm font-medium mb-1">Role</label>
+                   <Select value={editData.role} onValueChange={(value: 'employee' | 'installer') => setEditData({ ...editData, role: value })}>
+                     <SelectTrigger>
+                       <SelectValue />
+                     </SelectTrigger>
+                     <SelectContent>
+                       <SelectItem value="employee">Employee</SelectItem>
+                       <SelectItem value="installer">Installer</SelectItem>
+                     </SelectContent>
+                   </Select>
+                 </div>
+                 <div>
+                   <label className="block text-sm font-medium mb-1">Name</label>
+                   <Input
+                     value={editData.name}
+                     onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                     required
+                   />
+                 </div>
+                 <div>
+                   <label className="block text-sm font-medium mb-1">Mobile Number</label>
+                   <Input
+                     type="tel"
+                     value={editData.mobileNumber}
+                     onChange={(e) => setEditData({ ...editData, mobileNumber: e.target.value })}
+                     required
+                   />
+                 </div>
+                 <div>
+                   <label className="block text-sm font-medium mb-1">Password</label>
+                   <Input
+                     type="password"
+                     value={editData.password}
+                     onChange={(e) => setEditData({ ...editData, password: e.target.value })}
+                     required
+                   />
+                 </div>
+               </div>
               {editError && (
                 <p className="text-red-500 text-sm">{editError}</p>
               )}
@@ -551,19 +525,19 @@ export default function EmployeesPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Employee Details</DialogTitle>
+            <DialogDescription>View the employee information below.</DialogDescription>
           </DialogHeader>
           {viewingEmployee && (
-            <div className="space-y-2">
-              <p><strong>ID:</strong> {viewingEmployee.id}</p>
-              <p><strong>Name:</strong> {viewingEmployee.name}</p>
-              <p><strong>Mobile Number:</strong> {viewingEmployee.mobileNumber}</p>
-              <p><strong>Email:</strong> {viewingEmployee.email || 'N/A'}</p>
-              <p><strong>Employee ID:</strong> {viewingEmployee.empId}</p>
-              <p><strong>Role:</strong> {viewingEmployee.role}</p>
-              <p><strong>Status:</strong> {viewingEmployee.isBlocked ? 'Blocked' : 'Active'}</p>
-              <p><strong>Firebase UID:</strong> {viewingEmployee.firebaseUid || 'N/A'}</p>
-              <p><strong>Created At:</strong> {viewingEmployee.createdAt ? new Date(viewingEmployee.createdAt.seconds * 1000).toLocaleString() : 'N/A'}</p>
-            </div>
+             <div className="space-y-2">
+               <p><strong>ID:</strong> {viewingEmployee.id}</p>
+               <p><strong>Name:</strong> {viewingEmployee.name}</p>
+               <p><strong>Mobile Number:</strong> {viewingEmployee.mobileNumber}</p>
+               <p><strong>Employee ID:</strong> {viewingEmployee.empId}</p>
+               <p><strong>Role:</strong> {viewingEmployee.role}</p>
+               <p><strong>Status:</strong> {viewingEmployee.isBlocked ? 'Blocked' : 'Active'}</p>
+               <p><strong>Firebase UID:</strong> {viewingEmployee.firebaseUid || 'N/A'}</p>
+               <p><strong>Created At:</strong> {viewingEmployee.createdAt ? new Date(viewingEmployee.createdAt.seconds * 1000).toLocaleString() : 'N/A'}</p>
+             </div>
           )}
         </DialogContent>
       </Dialog>

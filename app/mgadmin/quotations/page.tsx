@@ -252,6 +252,7 @@ export default function QuotationPage() {
           border-color: #000000 !important;
         }
         .bg-gray-200 { background-color: #f3f4f6 !important; }
+        .bg-gray-50 { background-color: #f9fafb !important; }
         .text-sm { color: #000000 !important; }
         .font-bold { font-weight: bold !important; }
         .font-semibold { font-weight: 600 !important; }
