@@ -95,3 +95,15 @@ export interface Payment {
   notes: string;
   createdAt: string;
 }
+
+export interface EmployeePayment {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  amount: string;
+  paymentType: string; // e.g., 'salary', 'commission', 'bonus', 'advance'
+  modeOfPayment: string;
+  transactionId: string;
+  notes: string;
+  createdAt: string;
+}

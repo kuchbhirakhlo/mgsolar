@@ -8,14 +8,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Eye, Edit2, Trash2, Loader2 } from 'lucide-react';
 import { useFormSubmit } from '@/hooks/use-form-submit';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot, QuerySnapshot, DocumentData } from 'firebase/firestore';
-import { getCustomerByMobile, getAllCustomers, addPayment, getPayments, updatePayment, deletePayment } from '@/lib/firebase-service';
-import type { Customer, Payment } from '@/lib/types';
+import { getCustomerByMobile, getAllCustomers, addPayment, getPayments, updatePayment, deletePayment, getEmployees, getEmployeePayments, getEmployeePaymentsByEmpId, addEmployeePayment, updateEmployeePayment, deleteEmployeePayment } from '@/lib/firebase-service';
+import type { Customer, Payment, EmployeePayment } from '@/lib/types';
 
 
 
@@ -25,17 +26,30 @@ export default function AdminPaymentsPage() {
   const [employeeData, setEmployeeData] = useState<any>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [employeePayments, setEmployeePayments] = useState<EmployeePayment[]>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [selectedEmployeePayment, setSelectedEmployeePayment] = useState<EmployeePayment | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [viewDialog, setViewDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState('customer');
   const { isLoading, submitForm } = useFormSubmit();
   const [mobileNumber, setMobileNumber] = useState('');
   const [customer, setCustomer] = useState<Customer | null>(null);
+  const [employeeIdInput, setEmployeeIdInput] = useState('');
+  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [formData, setFormData] = useState({
     firstPayment: '',
     secondPayment: '',
     thirdPayment: '',
+    modeOfPayment: '',
+    transactionId: '',
+    notes: '',
+  });
+  const [employeeFormData, setEmployeeFormData] = useState({
+    amount: '',
+    paymentType: '',
     modeOfPayment: '',
     transactionId: '',
     notes: '',
@@ -50,7 +64,7 @@ export default function AdminPaymentsPage() {
       setEmployeeData(empData);
     }
 
-    // Load customers and payments from Firebase
+    // Load customers, payments, and employees from Firebase
     const loadData = async () => {
       try {
         // Load all customers first
@@ -76,6 +90,22 @@ export default function AdminPaymentsPage() {
         }
 
         setPayments(filteredPayments);
+
+        // Load employees
+        const allEmployees = await getEmployees();
+        setEmployees(allEmployees);
+
+        // Load employee payments
+        if (!employeeDataStr) {
+          // Admin: load all employee payments
+          const allEmployeePayments = await getEmployeePayments();
+          setEmployeePayments(allEmployeePayments);
+        } else {
+          // Employee: load only their own payments
+          const empData = JSON.parse(employeeDataStr);
+          const employeePayments = await getEmployeePaymentsByEmpId(empData.empId);
+          setEmployeePayments(employeePayments);
+        }
       } catch (error) {
         console.error('Error loading data:', error);
         alert('Error loading data');
@@ -110,10 +140,33 @@ export default function AdminPaymentsPage() {
     }
   };
 
+  const fetchEmployee = async (empId: string) => {
+    const found = employees.find(emp => emp.empId === empId);
+    if (found) {
+      setSelectedEmployee(found);
+      setEmployeeIdInput(empId);
+      setErrors({});
+      return found;
+    } else {
+      setErrors({ employee: 'Employee not found' });
+      setSelectedEmployee(null);
+      return null;
+    }
+  };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.firstPayment.trim()) newErrors.firstPayment = 'First payment is required';
     if (!formData.modeOfPayment.trim()) newErrors.modeOfPayment = 'Mode of payment is required';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateEmployeeForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!employeeFormData.amount.trim()) newErrors.amount = 'Amount is required';
+    if (!employeeFormData.paymentType.trim()) newErrors.paymentType = 'Payment type is required';
+    if (!employeeFormData.modeOfPayment.trim()) newErrors.modeOfPayment = 'Mode of payment is required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -126,6 +179,22 @@ export default function AdminPaymentsPage() {
       firstPayment: payment.firstPayment,
       secondPayment: payment.secondPayment,
       thirdPayment: payment.thirdPayment,
+      modeOfPayment: payment.modeOfPayment,
+      transactionId: payment.transactionId,
+      notes: payment.notes,
+    });
+    setIsEditing(true);
+    setShowForm(true);
+  };
+
+  const handleEmployeeEdit = (payment: EmployeePayment) => {
+    const emp = employees.find(e => e.empId === payment.employeeId);
+    setSelectedEmployee(emp || null);
+    setEmployeeIdInput(payment.employeeId);
+    setSelectedEmployeePayment(payment);
+    setEmployeeFormData({
+      amount: payment.amount,
+      paymentType: payment.paymentType,
       modeOfPayment: payment.modeOfPayment,
       transactionId: payment.transactionId,
       notes: payment.notes,
@@ -148,8 +217,26 @@ export default function AdminPaymentsPage() {
     }
   };
 
+  const handleEmployeeDelete = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this employee payment?')) {
+      try {
+        await deleteEmployeePayment(id);
+        const updatedPayments = employeePayments.filter(p => p.id !== id);
+        setEmployeePayments(updatedPayments);
+      } catch (error) {
+        console.error('Error deleting employee payment:', error);
+        alert('Error deleting employee payment');
+      }
+    }
+  };
+
   const handleView = (payment: Payment) => {
     setSelectedPayment(payment);
+    setViewDialog(true);
+  };
+
+  const handleEmployeeView = (payment: EmployeePayment) => {
+    setSelectedEmployeePayment(payment);
     setViewDialog(true);
   };
 
@@ -214,6 +301,63 @@ export default function AdminPaymentsPage() {
     }
   };
 
+  const handleEmployeeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const submitEmployeePayment = async () => {
+      try {
+        if (isEditing && selectedEmployeePayment) {
+          await updateEmployeePayment(selectedEmployeePayment.id, { ...selectedEmployeePayment, ...employeeFormData });
+          const updatedPayments = employeePayments.map(p => p.id === selectedEmployeePayment.id ? { ...selectedEmployeePayment, ...employeeFormData } : p);
+          setEmployeePayments(updatedPayments);
+        } else {
+          const newPaymentData = {
+            employeeId: selectedEmployee!.empId,
+            employeeName: selectedEmployee!.name,
+            ...employeeFormData,
+            createdAt: new Date().toISOString(),
+          };
+          const paymentId = await addEmployeePayment(newPaymentData);
+          const newPayment: EmployeePayment = {
+            id: paymentId,
+            ...newPaymentData,
+          };
+          const updatedPayments = [newPayment, ...employeePayments];
+          setEmployeePayments(updatedPayments);
+        }
+
+        setEmployeeFormData({
+          amount: '',
+          paymentType: '',
+          modeOfPayment: '',
+          transactionId: '',
+          notes: '',
+        });
+        setEmployeeIdInput('');
+        setSelectedEmployee(null);
+        setShowForm(false);
+        setIsEditing(false);
+        setSelectedEmployeePayment(null);
+        setErrors({});
+      } catch (error) {
+        console.error('Error saving employee payment:', error);
+        throw error;
+      }
+    };
+
+    if (!selectedEmployee) {
+      setErrors({ general: 'Employee must be selected first' });
+      return;
+    }
+
+    if (validateEmployeeForm()) {
+      submitForm(
+        submitEmployeePayment,
+        isEditing ? 'Employee payment updated successfully!' : 'Employee payment added successfully!'
+      );
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -226,17 +370,24 @@ export default function AdminPaymentsPage() {
           className="bg-secondary text-secondary-foreground hover:bg-secondary/90 gap-2"
         >
           <Plus className="w-4 h-4" />
-          Add Payment
+          Add {activeTab === 'customer' ? 'Customer' : 'Employee'} Payment
         </Button>
       </div>
 
-      {showForm && (
-        <Card className="border-muted">
-          <CardHeader>
-            <CardTitle>{isEditing ? 'Edit Payment' : 'New Payment'}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="customer">Customer Payments</TabsTrigger>
+          <TabsTrigger value="employee">Employee Payments</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="customer" className="space-y-6">
+          {showForm && activeTab === 'customer' && (
+            <Card className="border-muted">
+              <CardHeader>
+                <CardTitle>{isEditing ? 'Edit Customer Payment' : 'New Customer Payment'}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <Label htmlFor="mobileNumber">Customer Mobile Number *</Label>
                 <div className="flex gap-2">
@@ -427,73 +578,325 @@ export default function AdminPaymentsPage() {
                         <p><span className="font-medium">First Payment:</span> ₹{payment.firstPayment}</p>
                         <p><span className="font-medium">Due Balance:</span> ₹{dueBalance.toLocaleString()}</p>
                         <p><span className="font-medium">Mode:</span> {payment.modeOfPayment}</p>
-                         <p><span className="font-medium">Date:</span> {new Date(payment.createdAt).toLocaleDateString('en-GB')}</p>
+                          <p><span className="font-medium">Date:</span> {new Date(payment.createdAt).toLocaleDateString('en-GB')}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Customer Name</TableHead>
+                    <TableHead>Project Cost</TableHead>
+                    <TableHead>First Payment</TableHead>
+                    <TableHead>Due Balance</TableHead>
+                    <TableHead>Mode</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {payments.map((payment) => {
+                    const cust = customers.find(c => c.id === payment.customerId);
+                    // Calculate due balance: Project Cost - First Payment - Second Payment - Third Payment
+                    const projectCost = parseFloat(payment.projectCost) || 0;
+                    const firstPayment = parseFloat(payment.firstPayment) || 0;
+                    const secondPayment = parseFloat(payment.secondPayment) || 0;
+                    const thirdPayment = parseFloat(payment.thirdPayment) || 0;
+                    const dueBalance = projectCost - firstPayment - secondPayment - thirdPayment;
+
+                    return (
+                      <TableRow key={payment.id}>
+                        <TableCell>{payment.customerName || cust?.customerName || `Customer ${payment.customerId.slice(-6)}`}</TableCell>
+                        <TableCell>₹{payment.projectCost}</TableCell>
+                        <TableCell>₹{payment.firstPayment}</TableCell>
+                        <TableCell>₹{dueBalance.toLocaleString()}</TableCell>
+                        <TableCell>{payment.modeOfPayment}</TableCell>
+                        <TableCell>{new Date(payment.createdAt).toLocaleDateString('en-GB')}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" onClick={() => handleView(payment)}>
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => handleEdit(payment)}>
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                            <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDelete(payment.id)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+        </TabsContent>
+
+        <TabsContent value="employee" className="space-y-6">
+          {showForm && activeTab === 'employee' && (
+            <Card className="border-muted">
+              <CardHeader>
+                <CardTitle>{isEditing ? 'Edit Employee Payment' : 'New Employee Payment'}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleEmployeeSubmit} className="space-y-6">
+                  <div>
+                    <Label htmlFor="employeeId">Employee ID *</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="employeeId"
+                        value={employeeIdInput}
+                        onChange={(e) => setEmployeeIdInput(e.target.value)}
+                        className={errors.employee ? 'border-red-500' : ''}
+                        placeholder="Enter employee ID"
+                      />
+                      <Button type="button" onClick={() => employeeIdInput && fetchEmployee(employeeIdInput)} variant="outline">
+                        Fetch Employee
+                      </Button>
+                    </div>
+                    {errors.employee && <p className="text-red-500 text-sm">{errors.employee}</p>}
+                  </div>
+
+                  {selectedEmployee && (
+                    <div className="border-t pt-6">
+                      <h3 className="text-lg font-semibold mb-4">Employee Details</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label>Name</Label>
+                          <Input value={selectedEmployee.name} readOnly />
+                        </div>
+                        <div>
+                          <Label>Mobile</Label>
+                          <Input value={selectedEmployee.mobileNumber} readOnly />
+                        </div>
+                        <div>
+                          <Label>Employee ID</Label>
+                          <Input value={selectedEmployee.empId} readOnly />
+                        </div>
+                        <div>
+                          <Label>Role</Label>
+                          <Input value={selectedEmployee.role} readOnly />
+                        </div>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                  )}
 
-          {/* Desktop Table View */}
-          <div className="hidden md:block">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Customer Name</TableHead>
-                  <TableHead>Project Cost</TableHead>
-                  <TableHead>First Payment</TableHead>
-                  <TableHead>Due Balance</TableHead>
-                  <TableHead>Mode</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {payments.map((payment) => {
-                  const cust = customers.find(c => c.id === payment.customerId);
-                  // Calculate due balance: Project Cost - First Payment - Second Payment - Third Payment
-                  const projectCost = parseFloat(payment.projectCost) || 0;
-                  const firstPayment = parseFloat(payment.firstPayment) || 0;
-                  const secondPayment = parseFloat(payment.secondPayment) || 0;
-                  const thirdPayment = parseFloat(payment.thirdPayment) || 0;
-                  const dueBalance = projectCost - firstPayment - secondPayment - thirdPayment;
+                  {selectedEmployee && (
+                    <>
+                      <div className="border-t pt-6">
+                        <h3 className="text-lg font-semibold mb-4">Payment Details</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="amount">Amount *</Label>
+                            <Input
+                              id="amount"
+                              value={employeeFormData.amount}
+                              onChange={(e) => setEmployeeFormData({ ...employeeFormData, amount: e.target.value })}
+                              className={errors.amount ? 'border-red-500' : ''}
+                            />
+                            {errors.amount && <p className="text-red-500 text-sm">{errors.amount}</p>}
+                          </div>
+                          <div>
+                            <Label htmlFor="paymentType">Payment Type *</Label>
+                            <Select value={employeeFormData.paymentType} onValueChange={(value) => setEmployeeFormData({ ...employeeFormData, paymentType: value })}>
+                              <SelectTrigger className={errors.paymentType ? 'border-red-500' : ''}>
+                                <SelectValue placeholder="Select payment type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="salary">Salary</SelectItem>
+                                <SelectItem value="commission">Commission</SelectItem>
+                                <SelectItem value="bonus">Bonus</SelectItem>
+                                <SelectItem value="advance">Advance</SelectItem>
+                                <SelectItem value="reimbursement">Reimbursement</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            {errors.paymentType && <p className="text-red-500 text-sm">{errors.paymentType}</p>}
+                          </div>
+                          <div>
+                            <Label htmlFor="modeOfPayment">Mode of Payment *</Label>
+                            <Select value={employeeFormData.modeOfPayment} onValueChange={(value) => setEmployeeFormData({ ...employeeFormData, modeOfPayment: value })}>
+                              <SelectTrigger className={errors.modeOfPayment ? 'border-red-500' : ''}>
+                                <SelectValue placeholder="Select mode" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="cash">Cash</SelectItem>
+                                <SelectItem value="online">Online</SelectItem>
+                                <SelectItem value="cheque">Cheque</SelectItem>
+                                <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            {errors.modeOfPayment && <p className="text-red-500 text-sm">{errors.modeOfPayment}</p>}
+                          </div>
+                          <div>
+                            <Label htmlFor="transactionId">Transaction ID</Label>
+                            <Input
+                              id="transactionId"
+                              value={employeeFormData.transactionId}
+                              onChange={(e) => setEmployeeFormData({ ...employeeFormData, transactionId: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="notes">Notes</Label>
+                        <Textarea
+                          id="notes"
+                          value={employeeFormData.notes}
+                          onChange={(e) => setEmployeeFormData({ ...employeeFormData, notes: e.target.value })}
+                          rows={4}
+                        />
+                      </div>
+
+                      <div className="flex gap-4">
+                        <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={isLoading}>
+                          {isLoading ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              {isEditing ? 'Updating...' : 'Submitting...'}
+                            </>
+                          ) : (
+                            isEditing ? 'Update Payment' : 'Submit Payment'
+                          )}
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            setShowForm(false);
+                            setIsEditing(false);
+                            setSelectedEmployeePayment(null);
+                            setEmployeeIdInput('');
+                            setSelectedEmployee(null);
+                            setEmployeeFormData({
+                              amount: '',
+                              paymentType: '',
+                              modeOfPayment: '',
+                              transactionId: '',
+                              notes: '',
+                            });
+                            setErrors({});
+                          }}
+                          variant="outline"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </form>
+              </CardContent>
+            </Card>
+          )}
+
+          <Card className="border-muted">
+            <CardHeader>
+              <CardTitle>Employee Payment List</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {/* Mobile Card View */}
+              <div className="block md:hidden space-y-4">
+                {employeePayments.map((payment) => {
+                  const emp = employees.find(e => e.empId === payment.employeeId);
 
                   return (
-                    <TableRow key={payment.id}>
-                      <TableCell>{payment.customerName || cust?.customerName || `Customer ${payment.customerId.slice(-6)}`}</TableCell>
-                      <TableCell>₹{payment.projectCost}</TableCell>
-                      <TableCell>₹{payment.firstPayment}</TableCell>
-                      <TableCell>₹{dueBalance.toLocaleString()}</TableCell>
-                      <TableCell>{payment.modeOfPayment}</TableCell>
-                       <TableCell>{new Date(payment.createdAt).toLocaleDateString('en-GB')}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => handleView(payment)}>
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleEdit(payment)}>
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
-                          <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDelete(payment.id)}>
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                    <Card key={payment.id} className="border">
+                      <CardContent className="p-4">
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <h3 className="font-semibold">{payment.employeeName || emp?.name || `Employee ${payment.employeeId}`}</h3>
+                            <div className="flex gap-1">
+                              <Button size="sm" variant="outline" onClick={() => handleEmployeeView(payment)}>
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => handleEmployeeEdit(payment)}>
+                                <Edit2 className="w-4 h-4" />
+                              </Button>
+                              {!isEmployee && (
+                                <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleEmployeeDelete(payment.id)}>
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            <p><span className="font-medium">Amount:</span> ₹{payment.amount}</p>
+                            <p><span className="font-medium">Type:</span> {payment.paymentType}</p>
+                            <p><span className="font-medium">Mode:</span> {payment.modeOfPayment}</p>
+                            <p><span className="font-medium">Date:</span> {new Date(payment.createdAt).toLocaleDateString('en-GB')}</p>
+                          </div>
                         </div>
-                      </TableCell>
-                    </TableRow>
+                      </CardContent>
+                    </Card>
                   );
                 })}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Employee Name</TableHead>
+                      <TableHead>Employee ID</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Payment Type</TableHead>
+                      <TableHead>Mode</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {employeePayments.map((payment) => {
+                      const emp = employees.find(e => e.empId === payment.employeeId);
+
+                      return (
+                        <TableRow key={payment.id}>
+                          <TableCell>{payment.employeeName || emp?.name || `Employee ${payment.employeeId}`}</TableCell>
+                          <TableCell>{payment.employeeId}</TableCell>
+                          <TableCell>₹{payment.amount}</TableCell>
+                          <TableCell>{payment.paymentType}</TableCell>
+                          <TableCell>{payment.modeOfPayment}</TableCell>
+                          <TableCell>{new Date(payment.createdAt).toLocaleDateString('en-GB')}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="outline" onClick={() => handleEmployeeView(payment)}>
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => handleEmployeeEdit(payment)}>
+                                <Edit2 className="w-4 h-4" />
+                              </Button>
+                              {!isEmployee && (
+                                <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleEmployeeDelete(payment.id)}>
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={viewDialog} onOpenChange={setViewDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Payment Details</DialogTitle>
+            <DialogTitle>{selectedPayment ? 'Customer Payment Details' : 'Employee Payment Details'}</DialogTitle>
           </DialogHeader>
           {selectedPayment && (
             <div className="space-y-4">
@@ -507,6 +910,18 @@ export default function AdminPaymentsPage() {
               <div><strong>Transaction ID:</strong> {selectedPayment.transactionId}</div>
               <div><strong>Notes:</strong> {selectedPayment.notes}</div>
               <div><strong>Date:</strong> {new Date(selectedPayment.createdAt).toLocaleDateString('en-GB')}</div>
+            </div>
+          )}
+          {selectedEmployeePayment && (
+            <div className="space-y-4">
+              <div><strong>Employee:</strong> {selectedEmployeePayment.employeeName || employees.find(e => e.empId === selectedEmployeePayment.employeeId)?.name || `Employee ${selectedEmployeePayment.employeeId}`}</div>
+              <div><strong>Employee ID:</strong> {selectedEmployeePayment.employeeId}</div>
+              <div><strong>Amount:</strong> ₹{selectedEmployeePayment.amount}</div>
+              <div><strong>Payment Type:</strong> {selectedEmployeePayment.paymentType}</div>
+              <div><strong>Mode of Payment:</strong> {selectedEmployeePayment.modeOfPayment}</div>
+              <div><strong>Transaction ID:</strong> {selectedEmployeePayment.transactionId}</div>
+              <div><strong>Notes:</strong> {selectedEmployeePayment.notes}</div>
+              <div><strong>Date:</strong> {new Date(selectedEmployeePayment.createdAt).toLocaleDateString('en-GB')}</div>
             </div>
           )}
         </DialogContent>

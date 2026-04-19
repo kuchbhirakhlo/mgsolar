@@ -3,6 +3,7 @@ import {
   collection,
   addDoc,
   getDocs,
+  getDoc,
   updateDoc,
   deleteDoc,
   doc,
@@ -13,7 +14,7 @@ import {
 } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 import { createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth'
-import type { Project, Brand, ContactMessage, CareerApplication, Employee, Customer, Payment } from './types'
+import type { Project, Brand, ContactMessage, CareerApplication, Employee, Customer, Payment, EmployeePayment } from './types'
 
 // Projects
 export async function addProject(project: Omit<Project, 'id'>) {
@@ -173,7 +174,39 @@ export async function getEmployeeByFirebaseUid(firebaseUid: string): Promise<(Em
 }
 
 export async function updateEmployee(id: string, employee: Partial<Employee>) {
-  await updateDoc(doc(db, 'employees', id), employee)
+  // If empId is being updated, we need to update customer records as well
+  if (employee.empId) {
+    // Get the current employee data to find the old empId
+    const employeeRef = doc(db, 'employees', id);
+    const employeeSnap = await getDoc(employeeRef);
+
+    if (employeeSnap.exists()) {
+      const oldEmployeeData = employeeSnap.data() as Employee;
+      const oldEmpId = oldEmployeeData.empId;
+
+      // Update the employee record first
+      await updateDoc(employeeRef, employee);
+
+      // If empId changed, update all customer records that reference the old empId
+      if (oldEmpId !== employee.empId) {
+        const customersQuery = query(collection(db, 'customers'), where('createdBy', '==', oldEmpId));
+        const customersSnapshot = await getDocs(customersQuery);
+
+        // Update each customer record
+        const updatePromises = customersSnapshot.docs.map(customerDoc =>
+          updateDoc(customerDoc.ref, { createdBy: employee.empId })
+        );
+
+        await Promise.all(updatePromises);
+      }
+    } else {
+      // If we can't find the employee, just update normally
+      await updateDoc(employeeRef, employee);
+    }
+  } else {
+    // No empId update, just update the employee record
+    await updateDoc(doc(db, 'employees', id), employee);
+  }
 }
 
 export async function blockEmployee(id: string, isBlocked: boolean) {
@@ -232,4 +265,39 @@ export async function getAllCustomers() {
     id: doc.id,
     ...doc.data(),
   })) as (Customer & { id: string })[]
+}
+
+// Employee Payments
+export async function addEmployeePayment(employeePayment: Omit<EmployeePayment, 'id'>) {
+  const docRef = await addDoc(collection(db, 'employeePayments'), {
+    ...employeePayment,
+    createdAt: new Date(),
+  })
+  return docRef.id
+}
+
+export async function getEmployeePayments() {
+  const q = query(collection(db, 'employeePayments'), orderBy('createdAt', 'desc'))
+  const querySnapshot = await getDocs(q)
+  return querySnapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as (EmployeePayment & { id: string })[]
+}
+
+export async function getEmployeePaymentsByEmpId(empId: string) {
+  const q = query(collection(db, 'employeePayments'), where('employeeId', '==', empId), orderBy('createdAt', 'desc'))
+  const querySnapshot = await getDocs(q)
+  return querySnapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as (EmployeePayment & { id: string })[]
+}
+
+export async function updateEmployeePayment(id: string, employeePayment: Partial<EmployeePayment>) {
+  await updateDoc(doc(db, 'employeePayments', id), employeePayment)
+}
+
+export async function deleteEmployeePayment(id: string) {
+  await deleteDoc(doc(db, 'employeePayments', id))
 }

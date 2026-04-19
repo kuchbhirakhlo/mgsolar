@@ -24,7 +24,7 @@ interface MaterialDispatch {
   id: string;
   customerId: string;
   billNumber: string;
-  data: { name: string; value: string }[];
+  data: { name: string; quantity: string; price: string }[];
   createdAt: string;
 }
 
@@ -67,9 +67,9 @@ export default function AdminMaterialDispatchPage() {
   ];
   const fixedCount = materials.length;
   const emptyCount = 5;
-  const [data, setData] = useState<{name: string, value: string}[]>([
-    ...materials.map(name => ({name, value: ''})),
-    ...Array(emptyCount).fill({name: '', value: ''})
+  const [data, setData] = useState<{name: string, quantity: string, price: string}[]>([
+    ...materials.map(name => ({name, quantity: '', price: ''})),
+    ...Array(emptyCount).fill({name: '', quantity: '', price: ''})
   ]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -145,7 +145,7 @@ export default function AdminMaterialDispatchPage() {
     setViewDialog(true);
   };
 
-  const updateData = (index: number, updatedItem: {name: string, value: string}) => {
+  const updateData = (index: number, updatedItem: {name: string, quantity: string, price: string}) => {
     const newData = [...data];
     newData[index] = updatedItem;
     setData(newData);
@@ -170,8 +170,8 @@ export default function AdminMaterialDispatchPage() {
       }
 
                         setData([
-                          ...materials.map(name => ({name, value: ''})),
-                          ...Array(emptyCount).fill({name: '', value: ''})
+                          ...materials.map(name => ({name, quantity: '', price: ''})),
+                          ...Array(emptyCount).fill({name: '', quantity: '', price: ''})
                         ]);
       setCustomer(null);
       setMobileNumber('');
@@ -265,7 +265,7 @@ export default function AdminMaterialDispatchPage() {
                     <h3 className="text-lg font-semibold mb-4">Dispatch Data</h3>
                     <div className="space-y-4">
                       {data.map((item, index) => (
-                        <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div>
                             <Label htmlFor={`name-${index}`}>Material Name</Label>
                             <Input
@@ -277,11 +277,20 @@ export default function AdminMaterialDispatchPage() {
                             />
                           </div>
                           <div>
-                            <Label htmlFor={`value-${index}`}>Value</Label>
+                            <Label htmlFor={`quantity-${index}`}>Quantity</Label>
                             <Input
-                              id={`value-${index}`}
-                              value={item.value}
-                              onChange={(e) => updateData(index, { ...item, value: e.target.value })}
+                              id={`quantity-${index}`}
+                              value={item.quantity}
+                              onChange={(e) => updateData(index, { ...item, quantity: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor={`price-${index}`}>Price</Label>
+                            <Input
+                              id={`price-${index}`}
+                              type="number"
+                              value={item.price}
+                              onChange={(e) => updateData(index, { ...item, price: e.target.value })}
                             />
                           </div>
                         </div>
@@ -310,8 +319,8 @@ export default function AdminMaterialDispatchPage() {
                         setMobileNumber('');
                         setBillNumber('');
       setData([
-        ...materials.map(name => ({name, value: ''})),
-        ...Array(emptyCount).fill({name: '', value: ''})
+        ...materials.map(name => ({name, quantity: '', price: ''})),
+        ...Array(emptyCount).fill({name: '', quantity: '', price: ''})
       ]);
                         setErrors({});
                       }}
@@ -326,6 +335,98 @@ export default function AdminMaterialDispatchPage() {
           </CardContent>
         </Card>
       )}
+
+      <Card className="border-muted">
+        <CardHeader>
+          <CardTitle>Material Summary</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {/* Calculate material totals */}
+          {(() => {
+            const materialTotals: Record<string, { quantity: number; price: number; total: number }> = {};
+
+            dispatches.forEach(dispatch => {
+              dispatch.data.forEach(item => {
+                if (item.name && item.quantity && item.price) {
+                  const qty = parseFloat(item.quantity) || 0;
+                  const price = parseFloat(item.price) || 0;
+                  if (!materialTotals[item.name]) {
+                    materialTotals[item.name] = { quantity: 0, price: 0, total: 0 };
+                  }
+                  materialTotals[item.name].quantity += qty;
+                  materialTotals[item.name].price = price; // Use the latest price
+                  materialTotals[item.name].total += qty * price;
+                }
+              });
+            });
+
+            const grandTotal = Object.values(materialTotals).reduce((sum, item) => sum + item.total, 0);
+
+            return (
+              <>
+                {/* Mobile Card View */}
+                <div className="block md:hidden space-y-4">
+                  {materials.map((materialName) => {
+                    const total = materialTotals[materialName];
+                    return (
+                      <Card key={materialName} className="border">
+                        <CardContent className="p-4">
+                          <div className="space-y-2">
+                            <h3 className="font-semibold">{materialName}</h3>
+                            <div className="text-sm text-muted-foreground">
+                              <p><span className="font-medium">Quantity:</span> {total?.quantity || 0}</p>
+                              <p><span className="font-medium">Price:</span> ₹{total?.price || 0}</p>
+                              <p><span className="font-medium">Total:</span> ₹{total?.total || 0}</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                  <Card className="border-t-2 border-primary">
+                    <CardContent className="p-4">
+                      <div className="text-right font-bold">
+                        Grand Total: ₹{grandTotal.toFixed(2)}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Material Name</TableHead>
+                        <TableHead>Quantity</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead>Total</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {materials.map((materialName) => {
+                        const total = materialTotals[materialName];
+                        return (
+                          <TableRow key={materialName}>
+                            <TableCell className="font-medium">{materialName}</TableCell>
+                            <TableCell>{total?.quantity || 0}</TableCell>
+                            <TableCell>₹{total?.price || 0}</TableCell>
+                            <TableCell>₹{total?.total || 0}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      <TableRow className="border-t-2 border-primary font-bold">
+                        <TableCell colSpan={3} className="text-right">Grand Total:</TableCell>
+                        <TableCell>₹{grandTotal.toFixed(2)}</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
+            );
+          })()}
+        </CardContent>
+      </Card>
 
       <Card className="border-muted">
         <CardHeader>
@@ -419,7 +520,7 @@ export default function AdminMaterialDispatchPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                 {selectedDispatch.data.map((item, index) => (
                   <div key={index} className="text-sm">
-                    <strong>{item.name}:</strong> {item.value}
+                    <strong>{item.name}:</strong> Qty: {item.quantity}, Price: ₹{item.price}
                   </div>
                 ))}
               </div>
