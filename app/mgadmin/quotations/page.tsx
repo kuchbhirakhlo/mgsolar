@@ -485,7 +485,7 @@ export default function QuotationPage() {
                 <p>Operation & maintenance charges are not included in this price.</p>
               </div>
 
-              <div className="flex-1 text-sm">
+              <div className="flex-1 text-sm border border-gray-300 p-2 bg-gray-50">
                 <h2 className="font-bold">Company Bank Details</h2>
                 <span className="font-bold">
                 <p>Bank Name: Punjab National Bank</p>

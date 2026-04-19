@@ -375,9 +375,9 @@ export default function AdminPaymentsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className={`grid w-full ${!isEmployee ? 'grid-cols-2' : 'grid-cols-1'}`}>
           <TabsTrigger value="customer">Customer Payments</TabsTrigger>
-          <TabsTrigger value="employee">Employee Payments</TabsTrigger>
+          {!isEmployee && <TabsTrigger value="employee">Employee Payments</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="customer" className="space-y-6">
