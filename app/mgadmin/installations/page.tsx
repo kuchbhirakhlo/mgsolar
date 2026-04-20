@@ -133,8 +133,28 @@ export default function AdminInstallationsPage() {
           (pos) => {
             setLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
           },
-          (err) => console.log('Geolocation error:', err)
+          (err) => {
+            console.error('Geolocation error:', err);
+            // Try with different options if first attempt fails
+            if (err.code === err.PERMISSION_DENIED) {
+              alert('Location permission is required to geotag the photo. Please enable location access and try again.');
+            } else {
+              navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                  setLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+                },
+                (fallbackErr) => {
+                  console.error('Fallback geolocation error:', fallbackErr);
+                  alert('Unable to get location. Please ensure location services are enabled.');
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+              );
+            }
+          },
+          { enableHighAccuracy: true, timeout: 5000 }
         );
+      } else {
+        alert('Geolocation is not supported by this browser.');
       }
     }
   };

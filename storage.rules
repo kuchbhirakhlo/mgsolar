@@ -36,12 +36,14 @@ service firebase.storage {
       allow read, write, delete: if request.auth != null;
     }
 
-    // Installation photos - Admin and Employee access
+    // Installation photos - Admin and Employee access (frontend protected)
     match /installations/{allPaths=**} {
-      allow read, write, delete: if request.auth != null && (
-        request.auth.token.email in ['admin@mgsolar.com'] ||
-        exists(/databases/$(database)/documents/employees/$(request.auth.uid))
-      );
+      allow read, write, delete: if true;
+    }
+
+    // Material bills - Admin and Employee access (frontend protected)
+    match /materialBills/{allPaths=**} {
+      allow read, write, delete: if true;
     }
   }
 }

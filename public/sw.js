@@ -2,7 +2,7 @@ const CACHE_NAME = 'mg-solar-v1';
 const urlsToCache = [
   '/',
   '/manifest.json',
-  '/mgsolarlogo.png'
+  '/mgsolarlogo.jpeg'
 ];
 
 self.addEventListener('install', event => {

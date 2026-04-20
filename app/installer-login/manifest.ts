@@ -11,12 +11,12 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#000000',
     icons: [
       {
-        src: '/mgsolarlogo.png',
+        src: '/mgsolarlogo.jpeg',
         sizes: '192x192',
         type: 'image/png'
       },
       {
-        src: '/mgsolarlogo.png',
+        src: '/mgsolarlogo.jpeg',
         sizes: '512x512',
         type: 'image/png'
       }

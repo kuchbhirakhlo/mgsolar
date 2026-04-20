@@ -18,11 +18,11 @@ export function Header() {
           {/* Logo */}
           <Link href="/" className="flex items-center w-32 h-10 gap-2">
             <Image
-              src="/mgnewlogo.png"
+              src="/mgsolarlogo.jpeg"
               alt="MG Solar Logo"
               width={100}
               height={60}
-              className="h-auto w-auto rounded-full"
+              className="h-auto w-auto"
               suppressHydrationWarning
             />
           </Link>

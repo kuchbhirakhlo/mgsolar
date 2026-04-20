@@ -55,6 +55,25 @@ export default function AdminPaymentsPage() {
     notes: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [selectedEmployeeFilter, setSelectedEmployeeFilter] = useState<string>('all');
+  const [selectedCustomerFilter, setSelectedCustomerFilter] = useState<string>('all');
+
+  // Filter payments based on selected filters
+  const filteredPayments = payments.filter(payment => {
+    const customer = customers.find(c => c.id === payment.customerId);
+
+    // Filter by employee (customers assigned to employee)
+    if (selectedEmployeeFilter && selectedEmployeeFilter !== 'all' && (!customer || customer.createdBy !== selectedEmployeeFilter)) {
+      return false;
+    }
+
+    // Filter by specific customer
+    if (selectedCustomerFilter && selectedCustomerFilter !== 'all' && payment.customerId !== selectedCustomerFilter) {
+      return false;
+    }
+
+    return true;
+  });
 
   useEffect(() => {
     const employeeDataStr = sessionStorage.getItem('employeeData');
@@ -542,11 +561,57 @@ export default function AdminPaymentsPage() {
       <Card className="border-muted">
         <CardHeader>
           <CardTitle>Payment List</CardTitle>
+          {/* Filters */}
+          <div className="flex flex-col md:flex-row gap-4 mt-4">
+            <div className="flex-1">
+              <Label htmlFor="employeeFilter">Filter by Employee</Label>
+              <Select value={selectedEmployeeFilter} onValueChange={setSelectedEmployeeFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select employee" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Employees</SelectItem>
+                  {employees.map((employee) => (
+                    <SelectItem key={employee.empId} value={employee.empId}>
+                      {employee.name} ({employee.empId})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1">
+              <Label htmlFor="customerFilter">Filter by Customer</Label>
+              <Select value={selectedCustomerFilter} onValueChange={setSelectedCustomerFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select customer" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Customers</SelectItem>
+                  {customers.map((customer) => (
+                    <SelectItem key={customer.id} value={customer.id}>
+                      {customer.customerName} ({customer.mobileNumber})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSelectedEmployeeFilter('all');
+                  setSelectedCustomerFilter('all');
+                }}
+              >
+                Clear Filters
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {/* Mobile Card View */}
           <div className="block md:hidden space-y-4">
-            {payments.map((payment) => {
+            {filteredPayments.map((payment) => {
               const cust = customers.find(c => c.id === payment.customerId);
               // Calculate due balance: Project Cost - First Payment - Second Payment - Third Payment
               const projectCost = parseFloat(payment.projectCost) || 0;
@@ -602,7 +667,7 @@ export default function AdminPaymentsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {payments.map((payment) => {
+                  {filteredPayments.map((payment) => {
                     const cust = customers.find(c => c.id === payment.customerId);
                     // Calculate due balance: Project Cost - First Payment - Second Payment - Third Payment
                     const projectCost = parseFloat(payment.projectCost) || 0;

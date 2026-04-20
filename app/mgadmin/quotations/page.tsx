@@ -411,7 +411,7 @@ export default function QuotationPage() {
 
             {/* Watermark */}
             <div className="absolute inset-0 flex items-center justify-center opacity-10">
-              <img src="/mgsolarlogo.png" alt="logo" width={400} height={400}/>
+              <img src="/mgsolarlogo.jpeg" alt="logo" width={400} height={400}/>
             </div>
 
             {/* Header Image */}
@@ -481,7 +481,7 @@ export default function QuotationPage() {
 
             {/* Watermark */}
             <div className="absolute inset-0 flex items-center justify-center opacity-10">
-              <img src="/mgsolarlogo.png" alt="logo" width={400} height={400}/>
+              <img src="/mgsolarlogo.jpeg" alt="logo" width={400} height={400}/>
             </div>
 
             {/* Header Image */}

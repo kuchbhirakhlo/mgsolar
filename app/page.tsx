@@ -85,7 +85,7 @@ export default function Home() {
     "@type": "LocalBusiness",
     "name": "M.G. Enterprises",
     "description": "Leading solar panel dealer and installer in Lucknow, Uttar Pradesh. Providing high-quality solar panels, installation services, and renewable energy solutions.",
-    "url": "https://mgsolar.in",
+    "url": "https://mgsolar.co.in",
     "telephone": "+91-XXXXXXXXXX", // Add actual phone
     "email": "info@mgsolar.in", // Add actual email
     "address": {
