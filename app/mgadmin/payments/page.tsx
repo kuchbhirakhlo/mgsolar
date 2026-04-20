@@ -58,10 +58,14 @@ export default function AdminPaymentsPage() {
   const [selectedEmployeeFilter, setSelectedEmployeeFilter] = useState<string>('all');
 
   // Filter payments based on selected filters (same logic as customers page)
-  const filteredPayments = isEmployee ? payments : (selectedEmployeeFilter !== 'all' ? payments.filter(payment => {
-    const customer = customers.find(c => c.id === payment.customerId);
-    return customer && customer.createdBy === selectedEmployeeFilter;
-  }) : payments);
+  const filteredPayments = isEmployee
+    ? payments.filter(payment => customers.some(c => c.id === payment.customerId))
+    : (selectedEmployeeFilter !== 'all'
+        ? payments.filter(payment => {
+            const customer = customers.find(c => c.id === payment.customerId);
+            return customer && customer.createdBy === selectedEmployeeFilter;
+          })
+        : payments);
 
   useEffect(() => {
     const employeeDataStr = sessionStorage.getItem('employeeData');
@@ -72,31 +76,37 @@ export default function AdminPaymentsPage() {
     }
 
     // Load customers, payments, and employees from Firebase
+    let unsubscribeCustomers: () => void;
+
+    if (!employeeDataStr) {
+      // Admin: load all customers
+      const customersRef = collection(db, 'customers');
+      unsubscribeCustomers = onSnapshot(customersRef, (snapshot: QuerySnapshot<DocumentData>) => {
+        const customersData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Customer[];
+        setCustomers(customersData);
+      });
+    } else {
+      // Employee: load only customers created by this employee
+      const empData = JSON.parse(employeeDataStr);
+      const customersRef = collection(db, 'customers');
+      const q = query(customersRef, where('createdBy', '==', empData.empId));
+      unsubscribeCustomers = onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
+        const customersData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Customer[];
+        setCustomers(customersData);
+      });
+    }
+
     const loadData = async () => {
       try {
-        // Load all customers first
-        const allCustomers = await getAllCustomers();
-        let filteredCustomers = allCustomers;
-
-        if (employeeDataStr) {
-          const empData = JSON.parse(employeeDataStr);
-          // Filter customers created by this employee
-          filteredCustomers = allCustomers.filter((c: Customer) => c.createdBy === empData.empId);
-        }
-
-        setCustomers(filteredCustomers);
-
         // Load payments
         const allPayments = await getPayments();
-        let filteredPayments = allPayments;
-
-        if (employeeDataStr) {
-          // Filter payments for customers created by this employee
-          const employeeCustomerIds = filteredCustomers.map(c => c.id);
-          filteredPayments = allPayments.filter((p: Payment) => employeeCustomerIds.includes(p.customerId));
-        }
-
-        setPayments(filteredPayments);
+        setPayments(allPayments);
 
         // Load employees
         const allEmployees = await getEmployees();
@@ -120,6 +130,12 @@ export default function AdminPaymentsPage() {
     };
 
     loadData();
+
+    return () => {
+      if (unsubscribeCustomers) {
+        unsubscribeCustomers();
+      }
+    };
   }, []);
 
   const fetchCustomer = async () => {
