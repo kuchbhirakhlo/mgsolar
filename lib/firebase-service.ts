@@ -253,17 +253,21 @@ export async function deletePayment(id: string) {
 
 // Customers (for payments page to fetch customer data)
 export async function getCustomerByMobile(mobileNumber: string, employeeId?: string) {
-  let q = query(collection(db, 'customers'), where('mobileNumber', '==', mobileNumber))
-
-  // If employee ID is provided, filter by createdBy field as well
-  if (employeeId) {
-    q = query(collection(db, 'customers'), where('mobileNumber', '==', mobileNumber), where('createdBy', '==', employeeId))
-  }
+  const normalizedMobile = mobileNumber.replace(/\D/g, '');
+  const q = query(collection(db, 'customers'), where('mobileNumber', '==', normalizedMobile))
 
   const querySnapshot = await getDocs(q)
   if (querySnapshot.empty) return null
-  const doc = querySnapshot.docs[0]
-  return { id: doc.id, ...doc.data() } as Customer & { id: string }
+
+  // If employee ID is provided, filter results by createdBy field
+  const customers = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer & { id: string }))
+
+  if (employeeId) {
+    const filtered = customers.filter(customer => customer.createdBy === employeeId)
+    return filtered.length > 0 ? filtered[0] : null
+  }
+
+  return customers[0]
 }
 
 export async function getAllCustomers() {

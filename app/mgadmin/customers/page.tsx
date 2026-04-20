@@ -161,10 +161,21 @@ export default function AdminCustomersPage() {
   const filteredCustomers = isEmployee ? customers : (selectedEmployeeFilter !== 'all' ? customers.filter(c => c.createdBy === selectedEmployeeFilter) : customers);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+
+    if (name === 'mobileNumber') {
+      // Only allow digits and limit to 10 characters
+      const digitsOnly = value.replace(/\D/g, '').slice(0, 10);
+      setFormData({
+        ...formData,
+        [name]: digitsOnly,
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value,
+      });
+    }
   };
 
   const handleSelectChange = (name: string, value: string) => {
@@ -186,6 +197,11 @@ export default function AdminCustomersPage() {
         newErrors[field] = 'This field is required';
       }
     });
+
+    // Special validation for mobile number
+    if (formData.mobileNumber && formData.mobileNumber.length !== 10) {
+      newErrors.mobileNumber = 'Mobile number must be exactly 10 digits';
+    }
 
     // Check minimum quotation price if system type and KW are selected
     if (formData.systemType && formData.kilowatt && formData.quotationPrice) {
@@ -349,23 +365,30 @@ export default function AdminCustomersPage() {
     const submitCustomer = async () => {
       try {
         console.log('Starting customer submission...');
+
+        // Normalize mobile number (keep only digits)
+        const normalizedFormData = {
+          ...formData,
+          mobileNumber: formData.mobileNumber.replace(/\D/g, ''),
+        };
+
         if (isEditing && selectedCustomer) {
           console.log('Updating existing customer:', selectedCustomer.id);
           // Update existing customer
           const customerRef = doc(db, 'customers', selectedCustomer.id);
-          await updateDoc(customerRef, formData);
+          await updateDoc(customerRef, normalizedFormData);
           console.log('Customer updated successfully');
         } else {
           console.log('Adding new customer');
           // Check if customer with this mobile number already exists
-          const q = query(collection(db, 'customers'), where('mobileNumber', '==', formData.mobileNumber));
+          const q = query(collection(db, 'customers'), where('mobileNumber', '==', normalizedFormData.mobileNumber));
           const snapshot = await getDocs(q);
           if (!snapshot.empty) {
             throw new Error('A customer with this mobile number already exists. Please use a different mobile number.');
           }
 
           // Add new customer
-          const { assignedEmployee, ...customerData } = formData;
+          const { assignedEmployee, ...customerData } = normalizedFormData;
           const newCustomerData = {
             ...customerData,
             ...(assignedEmployee && assignedEmployee !== 'admin' && { createdBy: assignedEmployee }),
@@ -528,6 +551,8 @@ export default function AdminCustomersPage() {
                     name="mobileNumber"
                     value={formData.mobileNumber}
                     onChange={handleChange}
+                    maxLength={10}
+                    placeholder="Enter 10-digit mobile number"
                     className={errors.mobileNumber ? 'border-red-500' : ''}
                   />
                   {errors.mobileNumber && <p className="text-red-500 text-sm">{errors.mobileNumber}</p>}

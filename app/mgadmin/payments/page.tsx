@@ -56,24 +56,12 @@ export default function AdminPaymentsPage() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [selectedEmployeeFilter, setSelectedEmployeeFilter] = useState<string>('all');
-  const [selectedCustomerFilter, setSelectedCustomerFilter] = useState<string>('all');
 
-  // Filter payments based on selected filters
-  const filteredPayments = payments.filter(payment => {
+  // Filter payments based on selected filters (same logic as customers page)
+  const filteredPayments = isEmployee ? payments : (selectedEmployeeFilter !== 'all' ? payments.filter(payment => {
     const customer = customers.find(c => c.id === payment.customerId);
-
-    // Filter by employee (customers assigned to employee)
-    if (selectedEmployeeFilter && selectedEmployeeFilter !== 'all' && (!customer || customer.createdBy !== selectedEmployeeFilter)) {
-      return false;
-    }
-
-    // Filter by specific customer
-    if (selectedCustomerFilter && selectedCustomerFilter !== 'all' && payment.customerId !== selectedCustomerFilter) {
-      return false;
-    }
-
-    return true;
-  });
+    return customer && customer.createdBy === selectedEmployeeFilter;
+  }) : payments);
 
   useEffect(() => {
     const employeeDataStr = sessionStorage.getItem('employeeData');
@@ -558,55 +546,37 @@ export default function AdminPaymentsPage() {
         </Card>
       )}
 
+      {!isEmployee && (
+        <Card className="border-muted">
+          <CardHeader>
+            <CardTitle>Filter Payments</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4 items-end">
+              <div className="flex-1 max-w-xs">
+                <Label htmlFor="employeeFilter">Filter by Employee</Label>
+                <Select value={selectedEmployeeFilter} onValueChange={setSelectedEmployeeFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Payments" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Payments</SelectItem>
+                    {employees.map((employee) => (
+                      <SelectItem key={employee.empId} value={employee.empId}>
+                        {employee.name} ({employee.empId})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="border-muted">
         <CardHeader>
           <CardTitle>Payment List</CardTitle>
-          {/* Filters */}
-          <div className="flex flex-col md:flex-row gap-4 mt-4">
-            <div className="flex-1">
-              <Label htmlFor="employeeFilter">Filter by Employee</Label>
-              <Select value={selectedEmployeeFilter} onValueChange={setSelectedEmployeeFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select employee" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Employees</SelectItem>
-                  {employees.map((employee) => (
-                    <SelectItem key={employee.empId} value={employee.empId}>
-                      {employee.name} ({employee.empId})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex-1">
-              <Label htmlFor="customerFilter">Filter by Customer</Label>
-              <Select value={selectedCustomerFilter} onValueChange={setSelectedCustomerFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select customer" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Customers</SelectItem>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      {customer.customerName} ({customer.mobileNumber})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-end">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSelectedEmployeeFilter('all');
-                  setSelectedCustomerFilter('all');
-                }}
-              >
-                Clear Filters
-              </Button>
-            </div>
-          </div>
         </CardHeader>
         <CardContent>
           {/* Mobile Card View */}

@@ -5,16 +5,12 @@ import { db } from '@/lib/firebase';
 export async function GET(request: Request, { params }: { params: Promise<{ mobile: string }> }) {
   try {
     const { mobile } = await params;
+    const normalizedMobile = mobile.replace(/\D/g, ''); // Keep only digits
     const { searchParams } = new URL(request.url);
     const employeeId = searchParams.get('employeeId');
 
     const customersRef = collection(db, 'customers');
-    let q = query(customersRef, where('mobileNumber', '==', mobile));
-
-    // If employee ID is provided, filter by createdBy field as well
-    if (employeeId) {
-      q = query(customersRef, where('mobileNumber', '==', mobile), where('createdBy', '==', employeeId));
-    }
+    const q = query(customersRef, where('mobileNumber', '==', normalizedMobile));
 
     const snapshot = await getDocs(q);
 
@@ -25,10 +21,25 @@ export async function GET(request: Request, { params }: { params: Promise<{ mobi
       }, { status: 404 });
     }
 
-    const customer = {
-      id: snapshot.docs[0].id,
-      ...snapshot.docs[0].data()
-    };
+    // If employee ID is provided, filter results by createdBy field
+    const customers = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    let customer;
+    if (employeeId) {
+      const filtered = customers.filter(c => (c as any).createdBy === employeeId);
+      if (filtered.length === 0) {
+        return NextResponse.json({
+          success: false,
+          error: 'Customer not found'
+        }, { status: 404 });
+      }
+      customer = filtered[0];
+    } else {
+      customer = customers[0];
+    }
 
     return NextResponse.json({
       success: true,

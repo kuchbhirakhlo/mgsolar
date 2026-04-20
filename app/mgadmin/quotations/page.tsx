@@ -193,13 +193,15 @@ export default function QuotationPage() {
   const handleSubmit = async () => {
     const submitQuotation = async () => {
       // Check if quotation already exists for this mobile number
-      const existingQuotation = await getDocs(query(collection(db, 'quotations'), where('mobileNumber', '==', form.mobileNumber)));
+      const normalizedMobile = form.mobileNumber.replace(/\D/g, '');
+      const existingQuotation = await getDocs(query(collection(db, 'quotations'), where('mobileNumber', '==', normalizedMobile)));
       if (!existingQuotation.empty) {
         throw new Error('A quotation already exists for this mobile number.');
       }
 
       const quotationData = {
         ...form,
+        mobileNumber: form.mobileNumber.replace(/\D/g, ''),
         createdAt: new Date().toISOString(),
       };
       await addDoc(collection(db, 'quotations'), quotationData);
