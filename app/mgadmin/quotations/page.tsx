@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import html2pdf from "html2pdf.js";
 import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot, QuerySnapshot, DocumentData } from 'firebase/firestore';
 import { useFormSubmit } from '@/hooks/use-form-submit';
@@ -231,139 +230,66 @@ export default function QuotationPage() {
     return true;
   };
 
-  const downloadPDF = (quotationData?: Quotation) => {
+  const printQuotation = (quotationData?: Quotation) => {
     const element = document.getElementById("pdf-content");
 
     if (!element) {
-      alert("PDF content not found");
+      alert("Print content not found");
       return;
     }
 
     // Temporarily update the form data if using quotation data
     const originalForm = { ...form };
-    const dataToUse = quotationData || form;
-
     if (quotationData) {
       setForm(quotationData);
       // Wait for state update
-      setTimeout(() => generatePDF(dataToUse, element), 100);
+      setTimeout(() => performPrint(element), 100);
       return;
     }
 
-    generatePDF(dataToUse, element);
+    performPrint(element);
 
-    function generatePDF(data: any, pdfElement: HTMLElement) {
+    function performPrint(printElement: HTMLElement) {
       // Clone the element to avoid modifying the original
-      const clonedElement = pdfElement.cloneNode(true) as HTMLElement;
+      const clonedElement = printElement.cloneNode(true) as HTMLElement;
 
-      // Add CSS override for unsupported color functions
+      // Add print CSS
       const styleOverride = document.createElement('style');
       styleOverride.textContent = `
-        * {
-          background-color: #ffffff !important;
-          color: #000000 !important;
-          border-color: #000000 !important;
-          font-family: Arial, sans-serif !important;
-          word-break: break-word !important;
-          overflow-wrap: break-word !important;
-          white-space: normal !important;
+        @media print {
+          * {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            border-color: #000000 !important;
+            font-family: Arial, sans-serif !important;
+            page-break-inside: avoid !important;
+          }
+          p {
+            margin: 0 !important;
+            padding: 0 !important;
+            line-height: 1.4 !important;
+          }
+          @page { size: A4; margin: 0; }
         }
-        p {
-          margin: 0 !important;
-          padding: 0 !important;
-          line-height: 1.4 !important;
-        }
-        .bg-white { background-color: #ffffff !important; }
-        .bg-gray-200 { background-color: #f3f4f6 !important; }
-        .bg-gray-50 { background-color: #f9fafb !important; }
-        .text-gray-600 { color: #4b5563 !important; }
-        .border { border-color: #000000 !important; }
-        .border-gray-300 { border-color: #d1d5db !important; }
-        @page { size: A4; margin: 0; }
       `;
       clonedElement.insertBefore(styleOverride, clonedElement.firstChild);
 
-      // Force recompute styles
-      clonedElement.style.display = 'block';
-      clonedElement.offsetHeight; // Trigger reflow
+      // Store original body content
+      const originalBody = document.body.innerHTML;
 
-      // Wait for images to load
-      const images = clonedElement.querySelectorAll("img");
-      const imagePromises = Array.from(images).map(img => {
-        return new Promise((resolve, reject) => {
-          if (img.complete) {
-            resolve(void 0);
-          } else {
-            img.onload = resolve;
-            img.onerror = reject;
-          }
-        });
-      });
+      // Replace body with print content
+      document.body.innerHTML = clonedElement.outerHTML;
 
-      Promise.all(imagePromises).then(() => {
-        try {
-          html2pdf()
-            .from(clonedElement)
-            .set({
-              margin: [0, 0, 0, 0],
-              filename: `quotation_${data.quotationNo.replace(/\//g, '_')}.pdf`,
-              image: { type: 'jpeg', quality: 0.98 },
-              html2canvas: {
-                scale: 2,
-                useCORS: true,
-                allowTaint: true,
-                removeContainer: true,
-                foreignObjectRendering: false,
-                logging: false,
-                width: 794,
-                height: 2256, // Height for 2 pages (1123 * 2)
-                x: 0,
-                y: 0,
-                scrollX: 0,
-                scrollY: 0,
-              },
-              jsPDF: {
-                unit: 'px',
-                format: [794, 2256], // A4 width, 2 pages height
-                orientation: 'portrait'
-              },
-            })
-            .outputPdf('blob')
-            .then((pdfBlob) => {
-              const url = URL.createObjectURL(pdfBlob);
-              const printWindow = window.open(url, '_blank');
-              if (!printWindow) {
-                alert('Failed to open print window. Please allow popups.');
-              }
-              // Restore original form data
-              if (quotationData) {
-                setForm(originalForm);
-              }
-            })
-            .catch((error) => {
-              console.error("Error printing PDF:", error);
-              alert("Failed to print PDF. Please try again.");
-              // Restore original form data
-              if (quotationData) {
-                setForm(originalForm);
-              }
-            });
-        } catch (error) {
-          console.error("Error generating PDF:", error);
-          alert("Failed to generate PDF. Please try again.");
-          // Restore original form data
-          if (quotationData) {
-            setForm(originalForm);
-          }
-        }
-      }).catch((error) => {
-        console.error("Error loading images:", error);
-        alert("Failed to load images for PDF. Please try again.");
-        // Restore original form data
-        if (quotationData) {
-          setForm(originalForm);
-        }
-      });
+      // Print
+      window.print();
+
+      // Restore original body
+      document.body.innerHTML = originalBody;
+
+      // Restore original form data
+      if (quotationData) {
+        setForm(originalForm);
+      }
     }
   };
 
@@ -394,8 +320,8 @@ export default function QuotationPage() {
         </div>
 
         <div className="flex gap-4 mt-3">
-          <button onClick={() => downloadPDF()} className="bg-black text-white px-4 py-2">
-            Print PDF
+          <button onClick={() => printQuotation()} className="bg-black text-white px-4 py-2">
+            Print
           </button>
           <button onClick={handleSubmit} className="bg-blue-500 text-white px-4 py-2" disabled={isLoading}>
             {isLoading ? 'Saving...' : 'Save Quotation'}
@@ -409,7 +335,7 @@ export default function QuotationPage() {
         <div id="pdf-content" className="bg-white">
 
           {/* ================= PAGE 1 ================= */}
-          <div className="w-[794px] h-[1123px] p-10 relative">
+          <div className="w-[794px] h-[1123px] p-6 relative">
 
             {/* Watermark */}
             <div className="absolute inset-0 flex items-center justify-center opacity-10">
@@ -418,7 +344,7 @@ export default function QuotationPage() {
 
             {/* Header Image */}
             <div className="relative z-10">
-              <img src="/mgsolarheader.png" alt="header" width={754} height={100} className="w-full"/>
+              <img src="/mgsolarheader.png" alt="header" width={754} height={50} className="w-full"/>
             </div>
 
             {/* TO SECTION */}
@@ -471,25 +397,22 @@ export default function QuotationPage() {
 
             {/* FOOTER PAGE 1 */}
             <div className="absolute bottom-6 left-10 right-10">
-              <img src="/mgsolarfooter.png" alt="footer" width={754} height={50} className="w-full"/>
+              <img src="/mgsolarfooter.png" alt="footer" width={754} height={20} className="w-full"/>
             </div>
           </div>
 
-          {/* Gap between pages */}
-          <div className="h-8"></div>
-
           {/* ================= PAGE 2 ================= */}
-          <div className="w-[794px] h-[1123px] p-10 relative">
+          <div className="w-[794px] h-[1123px] p-6 relative">
 
             {/* Watermark */}
             <div className="absolute inset-0 flex items-center justify-center opacity-10">
               <img src="/mgsolarlogo.jpeg" alt="logo" width={400} height={400}/>
             </div>
 
-            {/* Header Image */}
-            <div className="relative z-10 mb-6">
-              <img src="/mgsolarheader.png" alt="header" width={754} height={100} className="w-full"/>
-            </div>
+             {/* Header Image */}
+             <div className="relative z-10 mb-6">
+               <img src="/mgsolarheader.png" alt="header" width={754} height={50} className="w-full"/>
+             </div>
 
             {/* PRICE BREAKUP */}
             <div className="text-sm">
@@ -557,7 +480,7 @@ export default function QuotationPage() {
 
             {/* FOOTER PAGE 2 */}
             <div className="absolute bottom-6 left-10 right-10">
-              <img src="/mgsolarfooter.png" alt="footer" width={754} height={50} className="w-full"/>
+              <img src="/mgsolarfooter.png" alt="footer" width={754} height={20} className="w-full"/>
             </div>
           </div>
         </div>
@@ -577,10 +500,10 @@ export default function QuotationPage() {
                   <p className="text-sm text-gray-600">{quotation.quotationNo}</p>
                 </div>
                 <button
-                  onClick={() => downloadPDF(quotation)}
+                  onClick={() => printQuotation(quotation)}
                   className="bg-blue-500 text-white px-3 py-1 text-sm rounded"
                 >
-                  Print PDF
+                  Print
                 </button>
               </div>
               <div className="text-sm text-gray-600 space-y-1">
@@ -620,11 +543,11 @@ export default function QuotationPage() {
                     <button
                       onClick={(e) => {
                         e.preventDefault();
-                        downloadPDF(quotation);
+                        printQuotation(quotation);
                       }}
                       className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
                     >
-                      Print PDF
+                      Print
                     </button>
                   </TableCell>
                 </TableRow>
