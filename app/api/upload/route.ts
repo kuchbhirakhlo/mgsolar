@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Upload to Firebase Storage
-    const downloadURL = await uploadToFirebase(file, 'mg-solar/projects');
+    const downloadURL = await uploadToFirebase(file, 'projects');
 
     return NextResponse.json({ url: downloadURL });
   } catch (error) {

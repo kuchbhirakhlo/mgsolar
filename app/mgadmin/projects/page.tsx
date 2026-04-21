@@ -35,55 +35,7 @@ export default function AdminProjectsPage() {
   const [uploading, setUploading] = useState(false);
   const { isLoading, submitForm } = useFormSubmit();
 
-  const addSampleData = async () => {
-    const sampleProjects = [
-      {
-        title: 'Residential Complex - Mumbai',
-        location: 'Mumbai, Maharashtra',
-        capacity: '250 kW',
-        date: '2024',
-        image: '',
-      },
-      {
-        title: 'Factory Solar Installation',
-        location: 'Pune, Maharashtra',
-        capacity: '500 kW',
-        date: '2024',
-        image: '',
-      },
-      {
-        title: 'Commercial Building - Delhi',
-        location: 'Delhi, Delhi',
-        capacity: '150 kW',
-        date: '2024',
-        image: '',
-      },
-      {
-        title: 'School Solar Project',
-        location: 'Bangalore, Karnataka',
-        capacity: '100 kW',
-        date: '2024',
-        image: '',
-      },
-      {
-        title: 'Hospital Renewable Energy',
-        location: 'Ahmedabad, Gujarat',
-        capacity: '300 kW',
-        date: '2024',
-        image: '',
-      }
-    ];
 
-    try {
-      for (const projectData of sampleProjects) {
-        await addDoc(collection(db, 'projects'), projectData);
-      }
-      alert('Sample projects added successfully!');
-    } catch (error) {
-      console.error('Error adding sample data:', error);
-      alert('Error adding sample data');
-    }
-  };
 
   useEffect(() => {
     const employeeData = sessionStorage.getItem('employeeData');
@@ -209,29 +161,18 @@ export default function AdminProjectsPage() {
           <p className="text-foreground/70 text-sm lg:text-base">Manage solar installation projects</p>
         </div>
         {!isEmployee && (
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <Button
-              onClick={addSampleData}
-              variant="outline"
-              className="gap-2 justify-center bg-green-600 text-white hover:bg-green-700"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Add Sample Data</span>
-              <span className="sm:hidden">Sample</span>
-            </Button>
-            <Button
-              onClick={() => {
-                setEditingProject(null);
-                setFormData({ title: '', location: '', capacity: '', date: new Date().getFullYear().toString(), image: '' });
-                setShowForm(!showForm);
-              }}
-              className="bg-secondary text-secondary-foreground hover:bg-secondary/90 gap-2 justify-center"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Add Project</span>
-              <span className="sm:hidden">Add</span>
-            </Button>
-          </div>
+          <Button
+            onClick={() => {
+              setEditingProject(null);
+              setFormData({ title: '', location: '', capacity: '', date: new Date().getFullYear().toString(), image: '' });
+              setShowForm(!showForm);
+            }}
+            className="bg-secondary text-secondary-foreground hover:bg-secondary/90 gap-2 justify-center"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Add Project</span>
+            <span className="sm:hidden">Add</span>
+          </Button>
         )}
       </div>
 

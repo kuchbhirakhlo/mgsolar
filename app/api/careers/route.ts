@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Add to Firestore
-    const docRef = await addDoc(collection(db, 'career_applications'), {
+    const docRef = await addDoc(collection(db, 'careerApplications'), {
       name,
       email,
       phone,

@@ -31,82 +31,7 @@ export default function AdminMessagesPage() {
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const addSampleData = async () => {
-    const sampleMessages = [
-      {
-        name: 'Rajesh Patel',
-        email: 'rajesh@example.com',
-        phone: '+91 9876543210',
-        city: 'Mumbai',
-        kw: '5',
-        message: 'Interested in solar installation for my residential complex. Please provide a quote for 5kW system.',
-        date: new Date().toISOString(),
-        read: false,
-        type: 'lead',
-      },
-      {
-        name: 'Priya Sharma',
-        email: 'priya@example.com',
-        phone: '+91 9876543211',
-        city: 'Delhi',
-        kw: '10',
-        message: 'Need quote for commercial solar system for my office building. Looking for 10kW installation.',
-        date: new Date(Date.now() - 86400000).toISOString(), // Yesterday
-        read: true,
-        type: 'lead',
-      },
-      {
-        name: 'Amit Kumar',
-        email: 'amit@example.com',
-        phone: '+91 9876543212',
-        city: 'Bangalore',
-        message: 'General inquiry about solar panel maintenance and cleaning services.',
-        date: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-        read: false,
-        type: 'contact',
-      },
-      {
-        name: 'Sneha Gupta',
-        email: 'sneha@example.com',
-        phone: '+91 9876543213',
-        city: 'Pune',
-        kw: '3',
-        message: 'Looking for residential solar installation. Budget around 2-3 lakhs for 3kW system.',
-        date: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
-        read: true,
-        type: 'lead',
-      },
-      {
-        name: 'Vikram Singh',
-        email: 'vikram@example.com',
-        phone: '+91 9876543214',
-        city: 'Ahmedabad',
-        message: 'Interested in learning more about government subsidies for solar installations.',
-        date: new Date(Date.now() - 345600000).toISOString(), // 4 days ago
-        read: false,
-        type: 'contact',
-      }
-    ];
 
-    try {
-      // Add sample leads
-      const leadsCollection = collection(db, 'leads');
-      for (const msg of sampleMessages.filter(m => m.type === 'lead')) {
-        await addDoc(leadsCollection, msg);
-      }
-
-      // Add sample contact messages
-      const contactsCollection = collection(db, 'contacts');
-      for (const msg of sampleMessages.filter(m => m.type === 'contact')) {
-        await addDoc(contactsCollection, msg);
-      }
-
-      alert('Sample messages added successfully!');
-    } catch (error) {
-      console.error('Error adding sample data:', error);
-      alert('Error adding sample data');
-    }
-  };
 
   useEffect(() => {
     const employeeData = sessionStorage.getItem('employeeData');
@@ -184,17 +109,7 @@ export default function AdminMessagesPage() {
           <h1 className="text-2xl lg:text-4xl font-bold text-primary mb-1 lg:mb-2">Contact Messages</h1>
           <p className="text-foreground/70 text-sm lg:text-base">Manage inquiries and quick leads from visitors</p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <Button
-            onClick={addSampleData}
-            variant="outline"
-            className="gap-2 justify-center bg-green-600 text-white hover:bg-green-700"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Add Sample Data</span>
-            <span className="sm:hidden">Sample</span>
-          </Button>
-        </div>
+
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
