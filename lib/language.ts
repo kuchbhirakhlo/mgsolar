@@ -9,7 +9,7 @@ export const translations = {
       contact: 'Contact',
     },
     hero: {
-      title: 'Solar Energy Solutions for a Sustainable Future',
+      title: 'MG Solar  for a Sustainable Future',
       subtitle: 'Powering homes and businesses with clean, renewable energy',
       cta: 'Get Started',
     },

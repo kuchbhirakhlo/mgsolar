@@ -9,7 +9,7 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Solar Energy Solutions',
+  title: 'MG Solar - Best Solar Panel in Lucknow Uttar Pradesh',
   description: 'Powering homes and businesses with clean, renewable energy',
   generator: 'v0.app',
   manifest: '/manifest.json',

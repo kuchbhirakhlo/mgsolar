@@ -13,7 +13,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-5 gap-8 mb-8">
           <div>
             <p className="text-blue-100 text-sm mb-4">
-              MG Solar is a leading provider of solar energy solutions, helping homes and businesses transition to clean, renewable energy. We specialize in residential and commercial solar installations, maintenance, and support services.
+              MG Solar is a leading provider of MG Solar , helping homes and businesses transition to clean, renewable energy. We specialize in residential and commercial solar installations, maintenance, and support services.
             </p>
             <p className="text-blue-100 text-sm">
               <strong>Address:</strong> Lucknow, Uttar Pradesh, India<br />

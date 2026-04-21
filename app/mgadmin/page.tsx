@@ -8,7 +8,13 @@ interface DashboardStats {
   totalProjects: number;
   totalTeamMembers: number;
   newMessages: number;
-  totalCapacity: number;
+  recentActivities: Array<{
+    id: string;
+    type: string;
+    title: string;
+    timestamp: string;
+    status: string;
+  }>;
 }
 
 export default function AdminDashboard() {
@@ -55,7 +61,7 @@ export default function AdminDashboard() {
     },
     {
       icon: Users,
-      label: 'Team Members',
+      label: 'Total Employee Number',
       value: stats?.totalTeamMembers?.toString() || '0',
       color: 'bg-green-100',
       textColor: 'text-green-600',
@@ -66,13 +72,6 @@ export default function AdminDashboard() {
       value: stats?.newMessages?.toString() || '0',
       color: 'bg-yellow-100',
       textColor: 'text-yellow-600',
-    },
-    {
-      icon: BarChart3,
-      label: 'Total Capacity (MW)',
-      value: stats?.totalCapacity?.toString() || '0',
-      color: 'bg-purple-100',
-      textColor: 'text-purple-600',
     },
   ];
 
@@ -124,27 +123,32 @@ export default function AdminDashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex items-center justify-between pb-4 border-b">
-              <div>
-                <p className="font-medium">New project application from Mumbai</p>
-                <p className="text-sm text-foreground/70">2 hours ago</p>
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-muted-foreground">Loading activities...</span>
               </div>
-              <span className="text-accent font-medium">Pending</span>
-            </div>
-            <div className="flex items-center justify-between pb-4 border-b">
-              <div>
-                <p className="font-medium">Career application received</p>
-                <p className="text-sm text-foreground/70">5 hours ago</p>
-              </div>
-              <span className="text-blue-600 font-medium">New</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">System maintenance completed</p>
-                <p className="text-sm text-foreground/70">1 day ago</p>
-              </div>
-              <span className="text-green-600 font-medium">Completed</span>
-            </div>
+            ) : stats?.recentActivities && stats.recentActivities.length > 0 ? (
+              stats.recentActivities.map((activity, index) => (
+                <div key={activity.id} className={`flex items-center justify-between ${index < stats.recentActivities.length - 1 ? 'pb-4 border-b' : ''}`}>
+                  <div>
+                    <p className="font-medium">{activity.title}</p>
+                    <p className="text-sm text-foreground/70">
+                      {new Date(activity.timestamp).toLocaleString()}
+                    </p>
+                  </div>
+                  <span className={`font-medium ${
+                    activity.status === 'New' ? 'text-blue-600' :
+                    activity.status === 'Read' ? 'text-green-600' :
+                    'text-accent'
+                  }`}>
+                    {activity.status}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="text-muted-foreground text-center py-8">No recent activities</p>
+            )}
           </div>
         </CardContent>
       </Card>

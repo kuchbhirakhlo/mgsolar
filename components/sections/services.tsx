@@ -39,7 +39,7 @@ export function ServicesSection() {
   const services = [
     {
       icon: <ResidentialIcon />,
-      image: '/heroimage.jpg',
+      image: '/homesolar.png',
       title: t.services.items.residential.name,
       description: t.services.items.residential.description,
       features: ['Panel Installation', 'Inverter Setup', 'Wiring & Safety', 'Monitoring System'],

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export async function GET() {
@@ -20,25 +20,22 @@ export async function GET() {
     const unreadMessagesSnapshot = await getDocs(unreadMessagesQuery);
     const newMessages = unreadMessagesSnapshot.size;
 
-    // Fetch total capacity
-    let totalCapacity = 0;
-    projectsSnapshot.docs.forEach((doc) => {
-      const data = doc.data();
-      if (data.capacity) {
-        const capacityStr = data.capacity.toString();
-        // Extract number and unit
-        const match = capacityStr.match(/(\d+(?:\.\d+)?)\s*(kW|MW)/i);
-        if (match) {
-          const value = parseFloat(match[1]);
-          const unit = match[2].toLowerCase();
-          if (unit === 'mw') {
-            totalCapacity += value;
-          } else if (unit === 'kw') {
-            totalCapacity += value / 1000; // Convert kW to MW
-          }
-        }
-      }
-    });
+    // Fetch total capacity (removed as per request)
+
+    // Fetch recent activities
+    const recentMessagesQuery = query(
+      collection(db, 'contact_messages'),
+      orderBy('createdAt', 'desc'),
+      limit(5)
+    );
+    const recentMessagesSnapshot = await getDocs(recentMessagesQuery);
+    const recentActivities = recentMessagesSnapshot.docs.map((doc) => ({
+      id: doc.id,
+      type: 'message',
+      title: doc.data().name ? `New message from ${doc.data().name}` : 'New message',
+      timestamp: doc.data().createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+      status: doc.data().read ? 'Read' : 'New',
+    }));
 
     return NextResponse.json({
       success: true,
@@ -46,7 +43,7 @@ export async function GET() {
         totalProjects,
         totalTeamMembers,
         newMessages,
-        totalCapacity: Math.round(totalCapacity * 10) / 10, // Round to 1 decimal place
+        recentActivities,
       },
       timestamp: new Date().toISOString(),
     });
