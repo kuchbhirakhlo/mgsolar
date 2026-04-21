@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { LayoutDashboard, FolderOpen, MessageSquare, LogOut, Users, UserPlus, Wrench, X, CreditCard, Truck, FileText, Briefcase, Receipt } from 'lucide-react';
+import { signOut } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 const adminNavItems = [
   { href: '/mgadmin', label: 'Dashboard', icon: LayoutDashboard },
@@ -45,10 +47,23 @@ export function AdminSidebar({ isEmployee = false, isInstaller = false, onClose,
     navItems = employeeNavItems;
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      // Sign out from Firebase Auth if admin
+      if (!isEmployee && !isInstaller) {
+        await signOut(auth);
+      }
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+
+    // Clear session storage
     sessionStorage.removeItem('adminLoggedIn');
     sessionStorage.removeItem('employeeLoggedIn');
     sessionStorage.removeItem('employeeData');
+    sessionStorage.removeItem('adminData');
+
+    // Redirect to appropriate login page
     if (isInstaller) {
       router.push('/installer-login');
     } else if (isEmployee) {

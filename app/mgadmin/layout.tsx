@@ -6,6 +6,8 @@ import { AdminSidebar } from '@/components/admin/sidebar';
 import { Toaster } from '@/components/ui/sonner';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 export default function AdminLayout({
   children,
@@ -51,6 +53,20 @@ export default function AdminLayout({
             setIsInstaller(false);
           }
         } else if (adminLoggedIn) {
+          // For admin users, also check Firebase Auth state
+          const unsubscribe = onAuthStateChanged(auth, (user: User | null) => {
+            if (!user) {
+              // Firebase user not authenticated, clear session and redirect
+              sessionStorage.removeItem('adminLoggedIn');
+              sessionStorage.removeItem('adminData');
+              router.push('/admin-login');
+              return;
+            }
+          });
+
+          // Clean up the listener
+          return () => unsubscribe();
+
           setIsEmployee(false);
           setIsInstaller(false);
         } else {

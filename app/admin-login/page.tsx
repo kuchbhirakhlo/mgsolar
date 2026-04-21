@@ -3,6 +3,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { Eye, EyeOff } from 'lucide-react';
+import { auth, db } from '@/lib/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 export default function AdminLogin() {
   const router = useRouter();
@@ -10,21 +14,75 @@ export default function AdminLogin() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    if (email === 'admin@mgsolar.com' && password === 'mgsolar2024') {
+    try {
+      // First, authenticate with Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Then check if this authenticated user exists in adminUsers collection
+      const q = query(collection(db, 'adminUsers'), where('email', '==', email));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        setError('You are not authorized as an admin user.');
+        // Sign out the user since they're not in admin collection
+        await auth.signOut();
+        setLoading(false);
+        return;
+      }
+
+      const adminDoc = querySnapshot.docs[0];
+      const adminData = adminDoc.data();
+
+      if (!adminData.active) {
+        setError('Your admin account has been deactivated. Contact support.');
+        // Sign out the user
+        await auth.signOut();
+        setLoading(false);
+        return;
+      }
+
+      // Store admin auth data in session storage
+      const sessionData = {
+        id: adminDoc.id,
+        firebaseUid: user.uid,
+        name: adminData.name,
+        email: adminData.email,
+        role: adminData.role,
+        permissions: adminData.permissions || [],
+        active: adminData.active
+      };
+
       sessionStorage.setItem('adminLoggedIn', 'true');
+      sessionStorage.setItem('adminData', JSON.stringify(sessionData));
+
+      // Navigate to admin dashboard
       router.push('/mgadmin');
-    } else {
-      setError('Invalid email or password');
+    } catch (err: any) {
+      console.error('Login error:', err);
+
+      // Handle Firebase Auth errors
+      if (err.code === 'auth/user-not-found') {
+        setError('No account found with this email address.');
+      } else if (err.code === 'auth/wrong-password') {
+        setError('Invalid password.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Invalid email address format.');
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('Too many failed login attempts. Please try again later.');
+      } else if (err.name !== 'AbortError') {
+        setError('Login failed. Please try again.');
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -46,27 +104,36 @@ export default function AdminLogin() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
+            <label className="block text-sm font-medium mb-1">Email Address</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="admin@mgsolar.com"
+              placeholder="Enter your email"
               required
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium mb-1">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="Enter password"
-              required
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 pr-12 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Enter password"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
 
           {error && (
@@ -82,8 +149,15 @@ export default function AdminLogin() {
           </button>
         </form>
 
+        {/* Login Note */}
+        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="text-sm text-blue-800">
+            Admin access only. Contact the system administrator if you need assistance.
+          </p>
+        </div>
+
         <div className="mt-4 text-center">
-          <a href="/" className="text-sm text-primary hover:underline">
+          <a href="/" className="text-sm text-muted-foreground hover:underline">
             Back to Website
           </a>
         </div>
