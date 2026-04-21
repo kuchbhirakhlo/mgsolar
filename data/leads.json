@@ -28,5 +28,25 @@
     "type": "quick-lead",
     "createdAt": "2026-04-11T07:46:38.897Z",
     "read": false
+  },
+  {
+    "id": "1776753735804",
+    "name": "Aviral Shukla",
+    "phone": "08383811977",
+    "city": "JAIPUR",
+    "kw": "3",
+    "type": "quick-lead",
+    "createdAt": "2026-04-21T06:42:15.679Z",
+    "read": false
+  },
+  {
+    "id": "1776757186147",
+    "name": "Aviral Shukla",
+    "phone": "08383811977",
+    "city": "JAIPUR",
+    "kw": "7",
+    "type": "quick-lead",
+    "createdAt": "2026-04-21T07:39:46.001Z",
+    "read": false
   }
 ]

@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-
-const dataFilePath = path.join(process.cwd(), 'data', 'leads.json');
+import { db } from '@/lib/firebase';
+import { collection, addDoc, getDocs, query, orderBy } from 'firebase/firestore';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
+
     const lead = {
-      id: Date.now().toString(),
       name: body.name,
       phone: body.mobile,
       city: body.city,
@@ -19,21 +16,9 @@ export async function POST(request: NextRequest) {
       read: false,
     };
 
-    const dir = path.join(process.cwd(), 'data');
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
+    const docRef = await addDoc(collection(db, 'leads'), lead);
 
-    let existingData: unknown[] = [];
-    if (fs.existsSync(dataFilePath)) {
-      const fileContent = fs.readFileSync(dataFilePath, 'utf-8');
-      existingData = JSON.parse(fileContent);
-    }
-
-    existingData.push(lead);
-    fs.writeFileSync(dataFilePath, JSON.stringify(existingData, null, 2));
-
-    return NextResponse.json({ success: true, lead });
+    return NextResponse.json({ success: true, lead: { id: docRef.id, ...lead } });
   } catch (error) {
     console.error('Error saving lead:', error);
     return NextResponse.json({ success: false, error: 'Failed to save lead' }, { status: 500 });
@@ -42,11 +27,15 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    if (fs.existsSync(dataFilePath)) {
-      const fileContent = fs.readFileSync(dataFilePath, 'utf-8');
-      return NextResponse.json(JSON.parse(fileContent));
-    }
-    return NextResponse.json([]);
+    const q = query(collection(db, 'leads'), orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+
+    const leads = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    return NextResponse.json(leads);
   } catch (error) {
     console.error('Error reading leads:', error);
     return NextResponse.json({ error: 'Failed to read leads' }, { status: 500 });

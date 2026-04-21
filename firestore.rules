@@ -308,9 +308,9 @@ service cloud.firestore {
     }
 
     // ===========================================
-    // CAREERS DATA - Job Applications (Admin Read, Public Write)
+    // CAREER APPLICATIONS - Job Applications (Admin Read, Public Write)
     // ===========================================
-    match /careers/{applicationId} {
+    match /career_applications/{applicationId} {
       // Allow anyone to submit job applications
       allow create: if request.resource.data.keys().hasAll(['name', 'email', 'phone']) &&
         request.resource.data.name is string &&
