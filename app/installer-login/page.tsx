@@ -52,8 +52,8 @@ export default function InstallerLogin() {
         return;
       }
 
-      if (employeeData.role !== 'engineer') {
-        setError('Access denied. This login is for engineers only.');
+      if (employeeData.role !== 'installer') {
+        setError('Access denied. This login is for installers only.');
         setLoading(false);
         return;
       }
@@ -93,7 +93,7 @@ export default function InstallerLogin() {
               className="rounded-full"
             />
           </div>
-          <h1 className="text-2xl font-bold text-primary">Engineer Login</h1>
+          <h1 className="text-2xl font-bold text-primary">Installer Login</h1>
           <p className="text-sm text-muted-foreground">MG Solar Dashboard</p>
         </div>
 

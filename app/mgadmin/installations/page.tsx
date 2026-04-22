@@ -76,7 +76,7 @@ export default function AdminInstallationsPage() {
     const employeeDataStr = sessionStorage.getItem('employeeData');
     if (employeeDataStr) {
       const empData = JSON.parse(employeeDataStr);
-      if (empData.role === 'engineer') {
+      if (empData.role === 'installer') {
         setIsInstaller(true);
       } else {
         setIsEmployee(true);

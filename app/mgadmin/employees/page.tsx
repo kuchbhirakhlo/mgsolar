@@ -61,7 +61,7 @@ export default function EmployeesPage() {
         ...formData,
         isBlocked: false,
       });
-      setFormData({ mobileNumber: '', name: '', password: '', empId: '', role: 'employee' });
+       setFormData({ mobileNumber: '', name: '', password: '', empId: '', role: 'employee' });
       setShowForm(false);
       // Reload data after creation
       loadEmployees(0);
@@ -467,15 +467,15 @@ export default function EmployeesPage() {
                  </div>
                  <div>
                    <label className="block text-sm font-medium mb-1">Role</label>
-                   <Select value={editData.role} onValueChange={(value: 'employee' | 'installer') => setEditData({ ...editData, role: value })}>
-                     <SelectTrigger>
-                       <SelectValue />
-                     </SelectTrigger>
-                     <SelectContent>
-                       <SelectItem value="employee">Employee</SelectItem>
-                       <SelectItem value="installer">Installer</SelectItem>
-                     </SelectContent>
-                   </Select>
+                    <Select value={editData.role} onValueChange={(value: 'employee' | 'installer') => setEditData({ ...editData, role: value })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="employee">Employee</SelectItem>
+                        <SelectItem value="installer">Installer</SelectItem>
+                      </SelectContent>
+                    </Select>
                  </div>
                  <div>
                    <label className="block text-sm font-medium mb-1">Name</label>
