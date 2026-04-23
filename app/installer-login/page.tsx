@@ -84,13 +84,13 @@ export default function InstallerLogin() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary via-primary to-primary/90">
       <div className="w-full max-w-md p-8 bg-white rounded-2xl shadow-2xl">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mb-4">
+          <div className="w-16 h-16 flex items-center justify-center mb-4">
             <Image
               src="/mgsolarlogo.jpeg"
               alt="MG Solar Logo"
               width={48}
               height={48}
-              className="rounded-full"
+              className=""
             />
           </div>
           <h1 className="text-2xl font-bold text-primary">Installer Login</h1>

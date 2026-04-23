@@ -7,13 +7,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, X, Eye, Edit2, Trash2, Loader2 } from 'lucide-react';
+import { Plus, X, Eye, Edit2, Trash2, Loader2, Download } from 'lucide-react';
 import { useFormSubmit } from '@/hooks/use-form-submit';
 import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot, QuerySnapshot, DocumentData } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getEmployees } from '@/lib/firebase-service';
+import type { Employee } from '@/lib/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Customer {
   id: string;
@@ -50,6 +53,7 @@ export default function AdminInstallationsPage() {
   const [employeeData, setEmployeeData] = useState<any>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [installations, setInstallations] = useState<Installation[]>([]);
+  const [installers, setInstallers] = useState<(Employee & { id: string })[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [selectedInstallation, setSelectedInstallation] = useState<Installation | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -83,6 +87,9 @@ export default function AdminInstallationsPage() {
       }
       setEmployeeData(empData);
     }
+  }, []);
+
+  useEffect(() => {
     // Load customers and installations from Firestore
     const customersRef = collection(db, 'customers');
     const unsubscribeCustomers = onSnapshot(customersRef, (snapshot: QuerySnapshot<DocumentData>) => {
@@ -99,14 +106,33 @@ export default function AdminInstallationsPage() {
         id: doc.id,
         ...doc.data()
       })) as Installation[];
-      setInstallations(installationsData);
+
+      // Filter installations based on user role
+      let filteredData = installationsData;
+      if (isInstaller && employeeData) {
+        filteredData = installationsData.filter(inst => inst.installerName === employeeData.name);
+      }
+
+      setInstallations(filteredData);
     });
+
+    // Load installers for admin dropdown
+    const loadInstallers = async () => {
+      try {
+        const employeesData = await getEmployees();
+        const installerEmployees = employeesData.filter(emp => emp.role === 'installer' && !emp.isBlocked);
+        setInstallers(installerEmployees);
+      } catch (error) {
+        console.error('Error loading installers:', error);
+      }
+    };
+    loadInstallers();
 
     return () => {
       unsubscribeCustomers();
       unsubscribeInstallations();
     };
-  }, []);
+  }, [isInstaller, employeeData]);
 
   const fetchCustomer = () => {
     if (!mobileNumber.trim()) {
@@ -185,7 +211,8 @@ export default function AdminInstallationsPage() {
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.installerName.trim()) newErrors.installerName = 'Installer name is required';
+    // Only require installer name for admins (not for installers since it's auto-filled)
+    if (!isInstaller && !formData.installerName.trim()) newErrors.installerName = 'Installer name is required';
     if (formData.panelSerialNumbers.some(s => !s.trim())) newErrors.serials = 'All serial numbers must be filled';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -227,10 +254,30 @@ export default function AdminInstallationsPage() {
     setViewDialog(true);
   };
 
+  const handleDownloadPhoto = async (photoUrl: string) => {
+    try {
+      const response = await fetch(photoUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `installation_${selectedInstallation?.id}_${Date.now()}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading photo:', error);
+      alert('Failed to download photo');
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     const submitInstallation = async () => {
+      // Auto-fill installer name for installers
+      const installerName = isInstaller && employeeData ? employeeData.name : formData.installerName;
       let photoUrl: string | undefined;
 
       if (photo) {
@@ -243,7 +290,7 @@ export default function AdminInstallationsPage() {
         // Update existing installation
         const installationRef = doc(db, 'installations', selectedInstallation.id);
         const updatedData: any = {
-          installerName: formData.installerName,
+          installerName: installerName,
           inverterSerialNumber: formData.inverterSerialNumber,
           acWireUsed: formData.acWireUsed,
           dcWireUsed: formData.dcWireUsed,
@@ -268,7 +315,7 @@ export default function AdminInstallationsPage() {
         // Add new installation
         const newInstallationData: any = {
           customerId: customer!.id,
-          installerName: formData.installerName,
+          installerName: installerName,
           inverterSerialNumber: formData.inverterSerialNumber,
           acWireUsed: formData.acWireUsed,
           dcWireUsed: formData.dcWireUsed,
@@ -292,17 +339,17 @@ export default function AdminInstallationsPage() {
         // Firestore onSnapshot will update the state automatically
       }
 
-                          setFormData({
-                            installerName: '',
-                            inverterSerialNumber: '',
-                            acWireUsed: '',
-                            dcWireUsed: '',
-                            earthingWireUsed: '',
-                            panelSerialNumbers: [''],
-                            frontLegHeight: '',
-                            backLegHeight: '',
-                            specialNotes: '',
-                          });
+                           setFormData({
+                             installerName: isInstaller && employeeData ? employeeData.name : '',
+                             inverterSerialNumber: '',
+                             acWireUsed: '',
+                             dcWireUsed: '',
+                             earthingWireUsed: '',
+                             panelSerialNumbers: [''],
+                             frontLegHeight: '',
+                             backLegHeight: '',
+                             specialNotes: '',
+                           });
       setPhoto(null);
       setLocation(null);
       setCustomer(null);
@@ -398,17 +445,35 @@ export default function AdminInstallationsPage() {
                 <>
                   <div className="border-t pt-6">
                     <h3 className="text-lg font-semibold mb-4">Installation Details</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="installerName">Installer Name *</Label>
-                        <Input
-                          id="installerName"
-                          value={formData.installerName}
-                          onChange={(e) => setFormData({ ...formData, installerName: e.target.value })}
-                          className={errors.installerName ? 'border-red-500' : ''}
-                        />
-                        {errors.installerName && <p className="text-red-500 text-sm">{errors.installerName}</p>}
-                      </div>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                       <div>
+                         <Label htmlFor="installerName">Installer Name *</Label>
+                         {isInstaller ? (
+                           <Input
+                             id="installerName"
+                             value={employeeData?.name || ''}
+                             readOnly
+                             className="bg-muted"
+                           />
+                         ) : (
+                           <Select
+                             value={formData.installerName}
+                             onValueChange={(value) => setFormData({ ...formData, installerName: value })}
+                           >
+                             <SelectTrigger className={errors.installerName ? 'border-red-500' : ''}>
+                               <SelectValue placeholder="Select installer" />
+                             </SelectTrigger>
+                             <SelectContent>
+                               {installers.map((installer) => (
+                                 <SelectItem key={installer.id} value={installer.name}>
+                                   {installer.name}
+                                 </SelectItem>
+                               ))}
+                             </SelectContent>
+                           </Select>
+                         )}
+                         {errors.installerName && <p className="text-red-500 text-sm">{errors.installerName}</p>}
+                       </div>
                       <div>
                         <Label htmlFor="inverterSerialNumber">Inverter Serial Number</Label>
                         <Input
@@ -522,9 +587,9 @@ export default function AdminInstallationsPage() {
                         setIsEditing(false);
                         setSelectedInstallation(null);
                         setCustomer(null);
-                        setMobileNumber('');
-      setFormData({
-        installerName: '',
+                         setMobileNumber('');
+       setFormData({
+        installerName: isInstaller && employeeData ? employeeData.name : '',
         inverterSerialNumber: '',
         acWireUsed: '',
         dcWireUsed: '',
@@ -655,12 +720,23 @@ export default function AdminInstallationsPage() {
               <div><strong>Special Notes:</strong> {selectedInstallation.specialNotes}</div>
               <div><strong>Date:</strong> {new Date(selectedInstallation.createdAt).toLocaleDateString()}</div>
               {selectedInstallation.latitude && <div><strong>Location:</strong> {selectedInstallation.latitude}, {selectedInstallation.longitude}</div>}
-              {selectedInstallation.photoUrl && (
-                <div>
-                  <strong>Photo:</strong>
-                  <img src={selectedInstallation.photoUrl} alt="Installation photo" className="mt-2 max-w-full h-auto" />
-                </div>
-              )}
+               {selectedInstallation.photoUrl && (
+                 <div>
+                   <div className="flex items-center justify-between mb-2">
+                     <strong>Photo:</strong>
+                     <Button
+                       size="sm"
+                       variant="outline"
+                       onClick={() => handleDownloadPhoto(selectedInstallation.photoUrl!)}
+                       className="flex items-center gap-2"
+                     >
+                       <Download className="w-4 h-4" />
+                       Download
+                     </Button>
+                   </div>
+                   <img src={selectedInstallation.photoUrl} alt="Installation photo" className="max-w-full h-auto rounded-lg shadow-sm" />
+                 </div>
+               )}
             </div>
           )}
         </DialogContent>
