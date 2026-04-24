@@ -16,8 +16,8 @@ export function Footer() {
               MG Solar is a leading provider of MG Solar , helping homes and businesses transition to clean, renewable energy. We specialize in residential and commercial solar installations, maintenance, and support services.
             </p>
             <p className="text-blue-100 text-sm">
-              <strong>Address:</strong> Lucknow, Uttar Pradesh, India<br />
-              <strong>Phone:</strong> +91 9876543210
+              <strong>Address:</strong> Chetna Towers, D-62, Vibhuti Khand, Gomti Nagar, Lucknow, Uttar Pradesh 226010<br />
+              <strong>Phone:</strong> +91 6307868355
             </p>
                        
           </div>
