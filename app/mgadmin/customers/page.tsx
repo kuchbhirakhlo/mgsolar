@@ -500,6 +500,7 @@ export default function AdminCustomersPage() {
                           <SelectValue placeholder={formData.systemType ? "Select KW" : "Select system type first"} />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="2kw">2kw</SelectItem>
                           <SelectItem value="3kw">3kw</SelectItem>
                           <SelectItem value="4kw">4kw</SelectItem>
                           <SelectItem value="5kw">5kw</SelectItem>
@@ -520,9 +521,12 @@ export default function AdminCustomersPage() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Premier Energies">Premier Energies</SelectItem>
-                          <SelectItem value="Adani Solar">Adani Solar</SelectItem>
+                          <SelectItem value="Adani">Adani</SelectItem>
                           <SelectItem value="Utl Fujiyama">Utl Fujiyama</SelectItem>
                           <SelectItem value="Vikram Solar">Vikram Solar</SelectItem>
+                          <SelectItem value="Waaree">Waaree</SelectItem>
+                          <SelectItem value="Tata">Tata</SelectItem>
+                          <SelectItem value="Premier">Premier</SelectItem>
                         </SelectContent>
                       </Select>
                       {errors.panelCompanyName && <p className="text-red-500 text-sm">{errors.panelCompanyName}</p>}
