@@ -3,9 +3,15 @@
 import { useLanguage } from '@/lib/language-context';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Menu } from 'lucide-react';
+import { Menu, ChevronDown, User } from 'lucide-react';
 import { useState } from 'react';
 import Image from 'next/image';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export function Header() {
   const { language, setLanguage, t } = useLanguage();
@@ -60,6 +66,26 @@ export function Header() {
             >
               <Link href="#contact">{t.hero.cta}</Link>
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="hidden sm:flex">
+                  <User className="w-4 h-4 mr-2" />
+                  Login
+                  <ChevronDown className="w-4 h-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link href="/admin-login">Admin</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/employee-login">Employee</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/installer-login">Engineer</Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <button
               className="md:hidden p-2"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -114,12 +140,42 @@ export function Header() {
             >
               {t.nav.contact}
             </Link>
+            <div className="mb-4">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-full">
+                    <User className="w-4 h-4 mr-2" />
+                    Login
+                    <ChevronDown className="w-4 h-4 ml-2" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center">
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin-login">Admin</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/employee-login">Employee</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/installer-login">Engineer</Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
             <Button
               asChild
               className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90"
             >
               <Link href="#contact">{t.hero.cta}</Link>
             </Button>
+            <div className="mt-4">
+              <button
+                onClick={() => setLanguage(language === 'en' ? 'hi' : 'en')}
+                className="w-full px-3 py-2 rounded-lg bg-muted text-sm font-medium hover:bg-accent hover:text-accent-foreground transition"
+              >
+                {language === 'en' ? 'हिन्दी' : 'EN'}
+              </button>
+            </div>
           </div>
         )}
       </nav>
