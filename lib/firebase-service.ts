@@ -14,7 +14,7 @@ import {
 } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 import { createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth'
-import type { Project, Brand, ContactMessage, CareerApplication, Employee, Customer, Payment, EmployeePayment } from './types'
+import type { Project, Brand, ContactMessage, CareerApplication, Employee, Customer, Payment, EmployeePayment, PaymentEntry } from './types'
 
 // Projects
 export async function addProject(project: Omit<Project, 'id'>) {
@@ -280,16 +280,45 @@ export async function getAllCustomers() {
 }
 
 // Employee Payments
-export async function addEmployeePayment(employeePayment: Omit<EmployeePayment, 'id'>) {
-  const docRef = await addDoc(collection(db, 'employeePayments'), {
-    ...employeePayment,
-    createdAt: new Date(),
-  })
-  return docRef.id
+export async function addEmployeePayment(employeeId: string, paymentEntry: Omit<PaymentEntry, 'id'>) {
+  // Check if employee already has a payment record
+  const q = query(collection(db, 'employeePayments'), where('employeeId', '==', employeeId));
+  const querySnapshot = await getDocs(q);
+
+  if (!querySnapshot.empty) {
+    // Employee has existing record, add payment to array
+    const doc = querySnapshot.docs[0];
+    const existingPayments = doc.data().payments || [];
+    const newPayment = { ...paymentEntry, id: Date.now().toString() };
+    const updatedPayments = [...existingPayments, newPayment];
+    const totalAmount = updatedPayments.reduce((sum, p) => sum + parseFloat(p.amount || '0'), 0).toString();
+
+    await updateDoc(doc.ref, {
+      payments: updatedPayments,
+      totalAmount,
+      updatedAt: new Date(),
+    });
+    return doc.id;
+  } else {
+    // Create new record for employee
+    const employee = await getEmployeeByEmpId(employeeId);
+    if (!employee) throw new Error('Employee not found');
+
+    const newPayment = { ...paymentEntry, id: Date.now().toString() };
+    const docRef = await addDoc(collection(db, 'employeePayments'), {
+      employeeId,
+      employeeName: employee.name,
+      payments: [newPayment],
+      totalAmount: paymentEntry.amount,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    return docRef.id;
+  }
 }
 
 export async function getEmployeePayments() {
-  const q = query(collection(db, 'employeePayments'), orderBy('createdAt', 'desc'))
+  const q = query(collection(db, 'employeePayments'), orderBy('updatedAt', 'desc'))
   const querySnapshot = await getDocs(q)
   return querySnapshot.docs.map((doc) => ({
     id: doc.id,
@@ -298,12 +327,13 @@ export async function getEmployeePayments() {
 }
 
 export async function getEmployeePaymentsByEmpId(empId: string) {
-  const q = query(collection(db, 'employeePayments'), where('employeeId', '==', empId), orderBy('createdAt', 'desc'))
+  const q = query(collection(db, 'employeePayments'), where('employeeId', '==', empId))
   const querySnapshot = await getDocs(q)
-  return querySnapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  })) as (EmployeePayment & { id: string })[]
+  if (querySnapshot.empty) return [];
+  return [{
+    id: querySnapshot.docs[0].id,
+    ...querySnapshot.docs[0].data(),
+  }] as (EmployeePayment & { id: string })[]
 }
 
 export async function updateEmployeePayment(id: string, employeePayment: Partial<EmployeePayment>) {

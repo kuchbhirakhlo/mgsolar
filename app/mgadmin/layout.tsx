@@ -18,6 +18,7 @@ export default function AdminLayout({
   const [isLoading, setIsLoading] = useState(true);
   const [isEmployee, setIsEmployee] = useState(false);
   const [isInstaller, setIsInstaller] = useState(false);
+  const [userName, setUserName] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     // Initialize from localStorage to persist collapsed state
@@ -45,6 +46,7 @@ export default function AdminLayout({
             }
             return;
           }
+          setUserName(employee.name);
           if (employee.role === 'installer' || employee.isInstaller) {
             setIsInstaller(true);
             setIsEmployee(false);
@@ -131,7 +133,7 @@ export default function AdminLayout({
           {/* User Info / Actions */}
           <div className="flex items-center gap-2">
             <div className="hidden sm:block text-sm text-blue-100">
-              {isInstaller ? 'Installer' : isEmployee ? 'Employee' : 'Admin'}
+              {isInstaller || isEmployee ? `Hello, ${userName}` : 'Admin'}
             </div>
           </div>
         </div>

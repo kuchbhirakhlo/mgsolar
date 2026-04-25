@@ -26,7 +26,7 @@ export default function AdminPaymentsPage() {
   const [employeeData, setEmployeeData] = useState<any>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [employeePayments, setEmployeePayments] = useState<EmployeePayment[]>([]);
+  const [employeePayments, setEmployeePayments] = useState<(EmployeePayment & { id: string })[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
@@ -210,21 +210,7 @@ export default function AdminPaymentsPage() {
     setShowForm(true);
   };
 
-  const handleEmployeeEdit = (payment: EmployeePayment) => {
-    const emp = employees.find(e => e.empId === payment.employeeId);
-    setSelectedEmployee(emp || null);
-    setEmployeeIdInput(payment.employeeId);
-    setSelectedEmployeePayment(payment);
-    setEmployeeFormData({
-      amount: payment.amount,
-      paymentType: payment.paymentType,
-      modeOfPayment: payment.modeOfPayment,
-      transactionId: payment.transactionId,
-      notes: payment.notes,
-    });
-    setIsEditing(true);
-    setShowForm(true);
-  };
+
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this payment?')) {
@@ -241,14 +227,14 @@ export default function AdminPaymentsPage() {
   };
 
   const handleEmployeeDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this employee payment?')) {
+    if (window.confirm('Are you sure you want to delete all payments for this employee?')) {
       try {
         await deleteEmployeePayment(id);
         const updatedPayments = employeePayments.filter(p => p.id !== id);
         setEmployeePayments(updatedPayments);
       } catch (error) {
-        console.error('Error deleting employee payment:', error);
-        alert('Error deleting employee payment');
+        console.error('Error deleting employee payments:', error);
+        alert('Error deleting employee payments');
       }
     }
   };
@@ -329,25 +315,20 @@ export default function AdminPaymentsPage() {
 
     const submitEmployeePayment = async () => {
       try {
-        if (isEditing && selectedEmployeePayment) {
-          await updateEmployeePayment(selectedEmployeePayment.id, { ...selectedEmployeePayment, ...employeeFormData });
-          const updatedPayments = employeePayments.map(p => p.id === selectedEmployeePayment.id ? { ...selectedEmployeePayment, ...employeeFormData } : p);
-          setEmployeePayments(updatedPayments);
-        } else {
-          const newPaymentData = {
-            employeeId: selectedEmployee!.empId,
-            employeeName: selectedEmployee!.name,
-            ...employeeFormData,
-            createdAt: new Date().toISOString(),
-          };
-          const paymentId = await addEmployeePayment(newPaymentData);
-          const newPayment: EmployeePayment = {
-            id: paymentId,
-            ...newPaymentData,
-          };
-          const updatedPayments = [newPayment, ...employeePayments];
-          setEmployeePayments(updatedPayments);
-        }
+        const paymentEntry = {
+          amount: employeeFormData.amount,
+          paymentType: employeeFormData.paymentType,
+          modeOfPayment: employeeFormData.modeOfPayment,
+          transactionId: employeeFormData.transactionId,
+          notes: employeeFormData.notes,
+          createdAt: new Date().toISOString(),
+        };
+
+        const recordId = await addEmployeePayment(selectedEmployee!.empId, paymentEntry);
+
+        // Reload employee payments to get updated data
+        const allEmployeePayments = await getEmployeePayments();
+        setEmployeePayments(allEmployeePayments);
 
         setEmployeeFormData({
           amount: '',
@@ -376,7 +357,7 @@ export default function AdminPaymentsPage() {
     if (validateEmployeeForm()) {
       submitForm(
         submitEmployeePayment,
-        isEditing ? 'Employee payment updated successfully!' : 'Employee payment added successfully!'
+        'Employee payment added successfully!'
       );
     }
   };
@@ -526,10 +507,10 @@ export default function AdminPaymentsPage() {
                       {isLoading ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          {isEditing ? 'Updating...' : 'Submitting...'}
+                          Submitting...
                         </>
                       ) : (
-                        isEditing ? 'Update Payment' : 'Submit Payment'
+                        'Submit Payment'
                       )}
                     </Button>
                     <Button
@@ -612,17 +593,16 @@ export default function AdminPaymentsPage() {
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <h3 className="font-semibold">{payment.customerName || cust?.customerName || `Customer ${payment.customerId.slice(-6)}`}</h3>
-                        <div className="flex gap-1">
-                          <Button size="sm" variant="outline" onClick={() => handleView(payment)}>
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleEdit(payment)}>
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
-                          <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDelete(payment.id)}>
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                            <div className="flex gap-1">
+                              <Button size="sm" variant="outline" onClick={() => handleEmployeeView(payment)}>
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              {!isEmployee && (
+                                <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleEmployeeDelete(payment.id)}>
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </div>
                       </div>
                       <div className="text-sm text-muted-foreground">
                         <p><span className="font-medium">Project Cost:</span> ₹{payment.projectCost}</p>
@@ -697,7 +677,7 @@ export default function AdminPaymentsPage() {
           {showForm && activeTab === 'employee' && (
             <Card className="border-muted">
               <CardHeader>
-                <CardTitle>{isEditing ? 'Edit Employee Payment' : 'New Employee Payment'}</CardTitle>
+                <CardTitle>Add Employee Payment</CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleEmployeeSubmit} className="space-y-6">
@@ -824,7 +804,6 @@ export default function AdminPaymentsPage() {
                           type="button"
                           onClick={() => {
                             setShowForm(false);
-                            setIsEditing(false);
                             setSelectedEmployeePayment(null);
                             setEmployeeIdInput('');
                             setSelectedEmployee(null);
@@ -858,6 +837,7 @@ export default function AdminPaymentsPage() {
               <div className="block md:hidden space-y-4">
                 {employeePayments.map((payment) => {
                   const emp = employees.find(e => e.empId === payment.employeeId);
+                  const lastPayment = payment.payments?.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
 
                   return (
                     <Card key={payment.id} className="border">
@@ -869,9 +849,6 @@ export default function AdminPaymentsPage() {
                               <Button size="sm" variant="outline" onClick={() => handleEmployeeView(payment)}>
                                 <Eye className="w-4 h-4" />
                               </Button>
-                              <Button size="sm" variant="outline" onClick={() => handleEmployeeEdit(payment)}>
-                                <Edit2 className="w-4 h-4" />
-                              </Button>
                               {!isEmployee && (
                                 <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleEmployeeDelete(payment.id)}>
                                   <Trash2 className="w-4 h-4" />
@@ -880,10 +857,9 @@ export default function AdminPaymentsPage() {
                             </div>
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            <p><span className="font-medium">Amount:</span> ₹{payment.amount}</p>
-                            <p><span className="font-medium">Type:</span> {payment.paymentType}</p>
-                            <p><span className="font-medium">Mode:</span> {payment.modeOfPayment}</p>
-                            <p><span className="font-medium">Date:</span> {new Date(payment.createdAt).toLocaleDateString('en-GB')}</p>
+                            <p><span className="font-medium">Total Amount:</span> ₹{payment.totalAmount}</p>
+                            <p><span className="font-medium">Payments:</span> {payment.payments?.length || 0}</p>
+                            <p><span className="font-medium">Last Payment:</span> {lastPayment ? new Date(lastPayment.createdAt).toLocaleDateString('en-GB') : 'N/A'}</p>
                           </div>
                         </div>
                       </CardContent>
@@ -899,32 +875,28 @@ export default function AdminPaymentsPage() {
                     <TableRow>
                       <TableHead>Employee Name</TableHead>
                       <TableHead>Employee ID</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Payment Type</TableHead>
-                      <TableHead>Mode</TableHead>
-                      <TableHead>Date</TableHead>
+                      <TableHead>Total Amount</TableHead>
+                      <TableHead>Number of Payments</TableHead>
+                      <TableHead>Last Payment Date</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {employeePayments.map((payment) => {
                       const emp = employees.find(e => e.empId === payment.employeeId);
+                      const lastPayment = payment.payments?.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
 
                       return (
                         <TableRow key={payment.id}>
                           <TableCell>{payment.employeeName || emp?.name || `Employee ${payment.employeeId}`}</TableCell>
                           <TableCell>{payment.employeeId}</TableCell>
-                          <TableCell>₹{payment.amount}</TableCell>
-                          <TableCell>{payment.paymentType}</TableCell>
-                          <TableCell>{payment.modeOfPayment}</TableCell>
-                          <TableCell>{new Date(payment.createdAt).toLocaleDateString('en-GB')}</TableCell>
+                          <TableCell>₹{payment.totalAmount}</TableCell>
+                          <TableCell>{payment.payments?.length || 0}</TableCell>
+                          <TableCell>{lastPayment ? new Date(lastPayment.createdAt).toLocaleDateString('en-GB') : 'N/A'}</TableCell>
                           <TableCell>
                             <div className="flex gap-2">
                               <Button size="sm" variant="outline" onClick={() => handleEmployeeView(payment)}>
                                 <Eye className="w-4 h-4" />
-                              </Button>
-                              <Button size="sm" variant="outline" onClick={() => handleEmployeeEdit(payment)}>
-                                <Edit2 className="w-4 h-4" />
                               </Button>
                               {!isEmployee && (
                                 <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleEmployeeDelete(payment.id)}>
@@ -967,12 +939,29 @@ export default function AdminPaymentsPage() {
             <div className="space-y-4">
               <div><strong>Employee:</strong> {selectedEmployeePayment.employeeName || employees.find(e => e.empId === selectedEmployeePayment.employeeId)?.name || `Employee ${selectedEmployeePayment.employeeId}`}</div>
               <div><strong>Employee ID:</strong> {selectedEmployeePayment.employeeId}</div>
-              <div><strong>Amount:</strong> ₹{selectedEmployeePayment.amount}</div>
-              <div><strong>Payment Type:</strong> {selectedEmployeePayment.paymentType}</div>
-              <div><strong>Mode of Payment:</strong> {selectedEmployeePayment.modeOfPayment}</div>
-              <div><strong>Transaction ID:</strong> {selectedEmployeePayment.transactionId}</div>
-              <div><strong>Notes:</strong> {selectedEmployeePayment.notes}</div>
-              <div><strong>Date:</strong> {new Date(selectedEmployeePayment.createdAt).toLocaleDateString('en-GB')}</div>
+              <div><strong>Total Amount:</strong> ₹{selectedEmployeePayment.totalAmount}</div>
+              <div><strong>Number of Payments:</strong> {selectedEmployeePayment.payments?.length || 0}</div>
+              <div className="mt-4">
+                <h4 className="font-semibold mb-2">Payment History:</h4>
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {selectedEmployeePayment.payments?.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((payment, index) => (
+                    <div key={payment.id} className="border rounded p-3 bg-gray-50">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p><strong>Amount:</strong> ₹{payment.amount}</p>
+                          <p><strong>Type:</strong> {payment.paymentType}</p>
+                          <p><strong>Mode:</strong> {payment.modeOfPayment}</p>
+                          {payment.transactionId && <p><strong>Transaction ID:</strong> {payment.transactionId}</p>}
+                          {payment.notes && <p><strong>Notes:</strong> {payment.notes}</p>}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {new Date(payment.createdAt).toLocaleDateString('en-GB')}
+                        </div>
+                      </div>
+                    </div>
+                  )) || <p>No payments found</p>}
+                </div>
+              </div>
             </div>
           )}
         </DialogContent>

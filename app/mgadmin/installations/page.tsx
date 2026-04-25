@@ -254,21 +254,21 @@ export default function AdminInstallationsPage() {
     setViewDialog(true);
   };
 
-  const handleDownloadPhoto = async (photoUrl: string) => {
+  const handleDownloadPhoto = async (photoUrl: string, installationId?: string) => {
     try {
       const response = await fetch(photoUrl);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `installation_${selectedInstallation?.id}_${Date.now()}.jpg`;
+      a.download = `installation_${installationId || selectedInstallation?.id}_${Date.now()}.jpg`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error downloading photo:', error);
-      alert('Failed to download photo');
+      alert('Failed to download photo. Please check your internet connection and try again.');
     }
   };
 
@@ -630,19 +630,24 @@ export default function AdminInstallationsPage() {
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <h3 className="font-semibold">{cust?.customerName || 'Unknown'}</h3>
-                        <div className="flex gap-1">
-                          <Button size="sm" variant="outline" onClick={() => handleView(inst)}>
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleEdit(inst)}>
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
-                          {!isEmployee && !isInstaller && (
-                            <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDelete(inst.id)}>
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
+                         <div className="flex gap-1">
+                           <Button size="sm" variant="outline" onClick={() => handleView(inst)}>
+                             <Eye className="w-4 h-4" />
+                           </Button>
+                           {inst.photoUrl && (
+                             <Button size="sm" variant="outline" onClick={() => handleDownloadPhoto(inst.photoUrl!, inst.id)}>
+                               <Download className="w-4 h-4" />
+                             </Button>
+                           )}
+                           <Button size="sm" variant="outline" onClick={() => handleEdit(inst)}>
+                             <Edit2 className="w-4 h-4" />
+                           </Button>
+                           {!isEmployee && !isInstaller && (
+                             <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDelete(inst.id)}>
+                               <Trash2 className="w-4 h-4" />
+                             </Button>
+                           )}
+                         </div>
                       </div>
                       <div className="text-sm text-muted-foreground">
                         <p><span className="font-medium">Installer:</span> {inst.installerName}</p>
@@ -677,21 +682,26 @@ export default function AdminInstallationsPage() {
                       <TableCell>{inst.installerName}</TableCell>
                       <TableCell>{inst.panelSerialNumbers.length}</TableCell>
                       <TableCell>{new Date(inst.createdAt).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => handleView(inst)}>
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleEdit(inst)}>
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
-                          {!isEmployee && !isInstaller && (
-                            <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDelete(inst.id)}>
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
+                       <TableCell>
+                         <div className="flex gap-2">
+                           <Button size="sm" variant="outline" onClick={() => handleView(inst)}>
+                             <Eye className="w-4 h-4" />
+                           </Button>
+                           {inst.photoUrl && (
+                             <Button size="sm" variant="outline" onClick={() => handleDownloadPhoto(inst.photoUrl!, inst.id)}>
+                               <Download className="w-4 h-4" />
+                             </Button>
+                           )}
+                           <Button size="sm" variant="outline" onClick={() => handleEdit(inst)}>
+                             <Edit2 className="w-4 h-4" />
+                           </Button>
+                           {!isEmployee && !isInstaller && (
+                             <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDelete(inst.id)}>
+                               <Trash2 className="w-4 h-4" />
+                             </Button>
+                           )}
+                         </div>
+                       </TableCell>
                     </TableRow>
                   );
                 })}
@@ -724,12 +734,12 @@ export default function AdminInstallationsPage() {
                  <div>
                    <div className="flex items-center justify-between mb-2">
                      <strong>Photo:</strong>
-                     <Button
-                       size="sm"
-                       variant="outline"
-                       onClick={() => handleDownloadPhoto(selectedInstallation.photoUrl!)}
-                       className="flex items-center gap-2"
-                     >
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDownloadPhoto(selectedInstallation.photoUrl!, selectedInstallation.id)}
+                        className="flex items-center gap-2"
+                      >
                        <Download className="w-4 h-4" />
                        Download
                      </Button>

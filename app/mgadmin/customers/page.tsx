@@ -188,8 +188,8 @@ export default function AdminCustomersPage() {
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     const requiredFields = [
-      'systemType', 'customerName', 'address', 'pincode', 'aadharCard', 'mobileNumber', 'electricityBillNumber',
-      'kilowatt', 'panelCompanyName', 'inverterCompanyName', 'referredBy'
+      'systemType', 'customerName', 'address', 'pincode', 'mobileNumber', 'electricityBillNumber',
+      'kilowatt', 'panelCompanyName', 'inverterCompanyName', 'referredBy', 'quotationPrice', 'dealPrice'
     ];
 
     requiredFields.forEach(field => {
@@ -520,13 +520,12 @@ export default function AdminCustomersPage() {
                           <SelectValue placeholder={formData.systemType ? "Select panel company" : "Select system type first"} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Premier Energies">Premier Energies</SelectItem>
+                          <SelectItem value="Premier Energies">Premier</SelectItem>
                           <SelectItem value="Adani">Adani</SelectItem>
                           <SelectItem value="Utl Fujiyama">Utl Fujiyama</SelectItem>
                           <SelectItem value="Vikram Solar">Vikram Solar</SelectItem>
                           <SelectItem value="Waaree">Waaree</SelectItem>
                           <SelectItem value="Tata">Tata</SelectItem>
-                          <SelectItem value="Premier">Premier</SelectItem>
                         </SelectContent>
                       </Select>
                       {errors.panelCompanyName && <p className="text-red-500 text-sm">{errors.panelCompanyName}</p>}
@@ -584,15 +583,13 @@ export default function AdminCustomersPage() {
                   {errors.pincode && <p className="text-red-500 text-sm">{errors.pincode}</p>}
                 </div>
                 <div>
-                  <Label htmlFor="aadharCard">Aadhar Card <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="aadharCard">Aadhar Card</Label>
                   <Input
                     id="aadharCard"
                     name="aadharCard"
                     value={formData.aadharCard}
                     onChange={handleChange}
-                    className={errors.aadharCard ? 'border-red-500' : ''}
                   />
-                  {errors.aadharCard && <p className="text-red-500 text-sm">{errors.aadharCard}</p>}
                 </div>
                 <div>
                   <Label htmlFor="panCard">PAN Card</Label>
@@ -709,7 +706,7 @@ export default function AdminCustomersPage() {
                 <h3 className="text-lg font-semibold mb-4">Solar Specifications</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="quotationPrice">Quotation Price</Label>
+                    <Label htmlFor="quotationPrice">Quotation Price <span className="text-red-500">*</span></Label>
                     <Input
                       id="quotationPrice"
                       name="quotationPrice"
@@ -721,14 +718,16 @@ export default function AdminCustomersPage() {
                     {errors.quotationPrice && <p className="text-red-500 text-sm">{errors.quotationPrice}</p>}
                   </div>
                   <div>
-                    <Label htmlFor="dealPrice">Deal Price</Label>
+                    <Label htmlFor="dealPrice">Deal Price <span className="text-red-500">*</span></Label>
                     <Input
                       id="dealPrice"
                       name="dealPrice"
                       type="number"
                       value={formData.dealPrice}
                       onChange={handleChange}
+                      className={errors.dealPrice ? 'border-red-500' : ''}
                     />
+                    {errors.dealPrice && <p className="text-red-500 text-sm">{errors.dealPrice}</p>}
                   </div>
                 </div>
               </div>
@@ -849,10 +848,12 @@ export default function AdminCustomersPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <h3 className="font-semibold">{customer.customerName}</h3>
-                      <div className="flex gap-1">
-                        <Button size="sm" variant="outline" onClick={() => handleView(customer)}>
-                          <Eye className="w-4 h-4" />
-                        </Button>
+                       <div className="flex gap-1">
+                         {!isEmployee && (
+                           <Button size="sm" variant="outline" onClick={() => handleView(customer)}>
+                             <Eye className="w-4 h-4" />
+                           </Button>
+                         )}
                         <Button size="sm" variant="outline" onClick={() => handleEdit(customer)}>
                           <Edit2 className="w-4 h-4" />
                         </Button>
@@ -900,11 +901,13 @@ export default function AdminCustomersPage() {
                     <TableCell>{customer.mobileNumber}</TableCell>
                     <TableCell>{customer.panelCompanyName}</TableCell>
                     <TableCell>{customer.inverterCompanyName}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => handleView(customer)}>
-                          <Eye className="w-4 h-4" />
-                        </Button>
+                     <TableCell>
+                       <div className="flex gap-2">
+                         {!isEmployee && (
+                           <Button size="sm" variant="outline" onClick={() => handleView(customer)}>
+                             <Eye className="w-4 h-4" />
+                           </Button>
+                         )}
                         <Button size="sm" variant="outline" onClick={() => handleEdit(customer)}>
                           <Edit2 className="w-4 h-4" />
                         </Button>

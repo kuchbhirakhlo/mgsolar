@@ -1,11 +1,14 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+
+export const dynamic = 'force-dynamic';
 import Image from "next/image";
 import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot, QuerySnapshot, DocumentData } from 'firebase/firestore';
 import { useFormSubmit } from '@/hooks/use-form-submit';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+
 
 interface Quotation {
   id: string;
@@ -230,7 +233,10 @@ export default function QuotationPage() {
     return true;
   };
 
-  const printQuotation = (quotationData?: Quotation) => {
+  const printQuotation = async (quotationData?: Quotation) => {
+    // Dynamically import the PDF utility to avoid SSR issues
+    const { generatePDF } = await import('@/lib/pdfUtils');
+
     const element = document.getElementById("pdf-content");
 
     if (!element) {
@@ -242,55 +248,15 @@ export default function QuotationPage() {
     const originalForm = { ...form };
     if (quotationData) {
       setForm(quotationData);
-      // Wait for state update
-      setTimeout(() => performPrint(element), 100);
+      // Wait for state update and then generate PDF
+      setTimeout(() => {
+        generatePDF(quotationData, form);
+        setForm(originalForm);
+      }, 100);
       return;
     }
 
-    performPrint(element);
-
-    function performPrint(printElement: HTMLElement) {
-      // Clone the element to avoid modifying the original
-      const clonedElement = printElement.cloneNode(true) as HTMLElement;
-
-      // Add print CSS
-      const styleOverride = document.createElement('style');
-      styleOverride.textContent = `
-        @media print {
-          * {
-            background-color: #ffffff !important;
-            color: #000000 !important;
-            border-color: #000000 !important;
-            font-family: Arial, sans-serif !important;
-            page-break-inside: avoid !important;
-          }
-          p {
-            margin: 0 !important;
-            padding: 0 !important;
-            line-height: 1.4 !important;
-          }
-          @page { size: A4; margin: 0; }
-        }
-      `;
-      clonedElement.insertBefore(styleOverride, clonedElement.firstChild);
-
-      // Store original body content
-      const originalBody = document.body.innerHTML;
-
-      // Replace body with print content
-      document.body.innerHTML = clonedElement.outerHTML;
-
-      // Print
-      window.print();
-
-      // Restore original body
-      document.body.innerHTML = originalBody;
-
-      // Restore original form data
-      if (quotationData) {
-        setForm(originalForm);
-      }
-    }
+    generatePDF(quotationData, form);
   };
 
   return (
@@ -330,8 +296,8 @@ export default function QuotationPage() {
       </div>
       )}
 
-      {/* 📄 PDF - Always rendered but hidden for employees */}
-      <div className={`flex justify-center ${isEmployee ? 'hidden' : ''}`}>
+      {/* 📄 PDF - Always rendered but off-screen for employees */}
+      <div className={`flex justify-center ${isEmployee ? 'absolute left-[-9999px] opacity-0' : ''}`}>
         <div id="pdf-content" className="bg-white">
 
           {/* ================= PAGE 1 ================= */}
@@ -447,7 +413,7 @@ export default function QuotationPage() {
               </div>
 
               <div className="flex-1 text-sm border border-gray-300 p-2 bg-gray-50">
-                <h2 className="font-bold">Company Bank Details</h2>
+                <h2 className="font-black">Bank Details</h2>
                 <p>Bank Name: Punjab National Bank</p>
                 <p>Account No.: 6193002100003379</p>
                 <p>IFSC: PUNB0619300</p>
@@ -593,7 +559,7 @@ export default function QuotationPage() {
 
             {/* AGREEMENT CONTENT CONTINUATION */}
             <div className="text-sm space-y-2">
-              <ol className="list-decimal list-inside space-y-1" start="7">
+              <ol className="list-decimal list-inside space-y-1" start={7}>
                 <li>Cable and other detailed documents.</li>
                 <li>Project completion report (PCR): Assisting the consumer in filling and uploading of signed documents (Consumer & Vendor) on the national portal.</li>
                 <li>Warranty: System warranty certificates should be provided to the consumer. The complete system should be warranted for 5 years from the date of commissioning by DISCOM. Individual component warranty documents provided by the manufacturer shall be provided to the consumer and all possible assistance should be extended to the consumer for claiming the warranty from the manufacturer.</li>
@@ -628,7 +594,7 @@ export default function QuotationPage() {
 
             {/* AGREEMENT CONTENT CONTINUATION */}
             <div className="text-sm space-y-2">
-              <ol className="list-decimal list-inside space-y-1" start="11">
+              <ol className="list-decimal list-inside space-y-1" start={11}>
                 <li>Performance of Plant: The Performance Ratio (PR) of Plant must be 75% at the time of commissioning of the project by DISCOM or its authorized agency. Vendor must provide (returnable basis) radiation sensor with valid calibration certificate of any NABL/International laboratory at the time of commissioning/testing of the plant. Vendor must maintain the PR of the plant till warranty of project i.e. 5 years from the date of commissioning.</li>
               </ol>
 
@@ -676,12 +642,14 @@ export default function QuotationPage() {
                   <h3 className="font-semibold">{quotation.customerName}</h3>
                   <p className="text-sm text-gray-600">{quotation.quotationNo}</p>
                 </div>
-                <button
-                  onClick={() => printQuotation(quotation)}
-                  className="bg-blue-500 text-white px-3 py-1 text-sm rounded"
-                >
-                  Print
-                </button>
+                {!isEmployee && (
+                  <button
+                    onClick={() => printQuotation(quotation)}
+                    className="bg-blue-500 text-white px-3 py-1 text-sm rounded"
+                  >
+                    Print
+                  </button>
+                )}
               </div>
               <div className="text-sm text-gray-600 space-y-1">
                 <p><span className="font-medium">Mobile:</span> {quotation.mobileNumber}</p>
@@ -716,16 +684,18 @@ export default function QuotationPage() {
                   <TableCell>{quotation.kilowatt} KW</TableCell>
                   <TableCell>₹{quotation.price}</TableCell>
                   <TableCell>{new Date(quotation.createdAt).toLocaleDateString()}</TableCell>
-                  <TableCell className="text-center">
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        printQuotation(quotation);
-                      }}
-                      className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
-                    >
-                      Print
-                    </button>
+                   <TableCell className="text-center">
+                    {!isEmployee && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          printQuotation(quotation);
+                        }}
+                        className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
+                      >
+                        Print
+                      </button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
