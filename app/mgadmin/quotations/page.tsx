@@ -6,7 +6,6 @@ import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot, QuerySnapshot, DocumentData } from 'firebase/firestore';
 import { useFormSubmit } from '@/hooks/use-form-submit';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import html2pdf from 'html2pdf.js';
 import QuotationPDF from '@/components/QuotationPDF';
 
 interface Quotation {
@@ -263,30 +262,8 @@ export default function QuotationPage() {
     performPrint(element);
 
     function performPrint(printElement: HTMLElement) {
-      const isMobile = /Mobi|Android/i.test(navigator.userAgent);
-      if (isMobile) {
-        const originalDisplay = printElement.style.display;
-        printElement.style.display = 'block';
-        html2pdf().set({
-          margin: 0,
-          filename: 'quotation.pdf',
-          image: { type: 'jpeg', quality: 0.9 },
-          html2canvas: { scale: 1 },
-          jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-        }).from(printElement).outputPdf('blob').then((pdfBlob: Blob) => {
-          const url = URL.createObjectURL(pdfBlob);
-          window.open(url, '_blank');
-          if (quotationData) {
-            setForm(originalForm);
-          }
-        }).catch((error) => {
-          console.error('PDF generation failed:', error);
-          alert('Failed to generate PDF for printing. Please try again or use desktop mode.');
-        }).finally(() => {
-          printElement.style.display = originalDisplay;
-        });
-        return;
-      }
+      const originalDisplay = printElement.style.display;
+      printElement.style.display = 'block';
 
       // Clone the element to avoid modifying the original
       const clonedElement = printElement.cloneNode(true) as HTMLElement;
@@ -318,17 +295,36 @@ export default function QuotationPage() {
       `;
       clonedElement.insertBefore(styleOverride, clonedElement.firstChild);
 
-      // Store original body content
-      const originalBody = document.body.innerHTML;
+      // Open a new window for printing
+      const printWindow = window.open('', '_blank', 'width=800,height=600');
+      if (!printWindow) {
+        alert('Unable to open print window. Please allow popups and try again.');
+        printElement.style.display = originalDisplay;
+        return;
+      }
 
-      // Replace body with print content
-      document.body.innerHTML = clonedElement.outerHTML;
+      // Write the print content to the new window
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Quotation Print</title>
+          </head>
+          <body>
+            ${clonedElement.outerHTML}
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
 
-      // Print
-      window.print();
+      // Wait for content to load, then print
+      printWindow.onload = () => {
+        printWindow.print();
+        printWindow.close();
+      };
 
-      // Restore original body
-      document.body.innerHTML = originalBody;
+      // Restore original display
+      printElement.style.display = originalDisplay;
 
       // Restore original form data
       if (quotationData) {
