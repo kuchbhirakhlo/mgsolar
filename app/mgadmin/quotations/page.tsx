@@ -1,14 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-
-export const dynamic = 'force-dynamic';
 import Image from "next/image";
 import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot, QuerySnapshot, DocumentData } from 'firebase/firestore';
 import { useFormSubmit } from '@/hooks/use-form-submit';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-
 
 interface Quotation {
   id: string;
@@ -233,10 +230,7 @@ export default function QuotationPage() {
     return true;
   };
 
-  const printQuotation = async (quotationData?: Quotation) => {
-    // Dynamically import the PDF utility to avoid SSR issues
-    const { generatePDF } = await import('@/lib/pdfUtils');
-
+  const printQuotation = (quotationData?: Quotation) => {
     const element = document.getElementById("pdf-content");
 
     if (!element) {
@@ -248,15 +242,92 @@ export default function QuotationPage() {
     const originalForm = { ...form };
     if (quotationData) {
       setForm(quotationData);
-      // Wait for state update and then generate PDF
-      setTimeout(() => {
-        generatePDF(quotationData, form);
-        setForm(originalForm);
-      }, 100);
+      // Wait for state update
+      setTimeout(() => performPrint(element), 100);
       return;
     }
 
-    generatePDF(quotationData, form);
+    performPrint(element);
+
+    function performPrint(printElement: HTMLElement) {
+      // Clone the element to avoid modifying the original
+      const clonedElement = printElement.cloneNode(true) as HTMLElement;
+
+      // Add print CSS
+      const styleOverride = document.createElement('style');
+      styleOverride.textContent = `
+        @media print {
+          * {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            border-color: #000000 !important;
+            font-family: Arial, sans-serif !important;
+            page-break-inside: avoid !important;
+          }
+          p {
+            margin: 0 !important;
+            padding: 0 !important;
+            line-height: 1.4 !important;
+          }
+          @page { size: A4; margin: 0; }
+        }
+        body { margin: 0; padding: 0; }
+      `;
+      clonedElement.insertBefore(styleOverride, clonedElement.firstChild);
+
+      // Open a new window for printing (better mobile support)
+      const printWindow = window.open('', '_blank', 'width=800,height=600');
+
+      if (!printWindow) {
+        alert("Please allow popups for printing");
+        return;
+      }
+
+      // Write the content to the new window
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Quotation Print</title>
+            <style>
+              @media print {
+                * {
+                  background-color: #ffffff !important;
+                  color: #000000 !important;
+                  border-color: #000000 !important;
+                  font-family: Arial, sans-serif !important;
+                  page-break-inside: avoid !important;
+                }
+                p {
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  line-height: 1.4 !important;
+                }
+                @page { size: A4; margin: 0; }
+              }
+              body { margin: 0; padding: 0; }
+            </style>
+          </head>
+          <body>
+            ${clonedElement.innerHTML}
+          </body>
+        </html>
+      `);
+
+      printWindow.document.close();
+
+      // Wait for content to load, then print
+      printWindow.onload = () => {
+        printWindow.print();
+        // Close the window after printing (optional)
+        printWindow.close();
+      };
+
+      // Restore original form data
+      if (quotationData) {
+        setForm(originalForm);
+      }
+    }
   };
 
   return (
