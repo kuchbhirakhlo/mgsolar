@@ -87,15 +87,26 @@ export default function QuotationPage() {
         }
 
         setQuotations(filteredQuotations.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+
+        // Compute next quotation number
+        let nextNumber = 201;
+        if (filteredQuotations.length > 0) {
+          const numbers = filteredQuotations.map(q => {
+            const match = q.quotationNo.match(/^MGE(\d+)$/);
+            return match ? parseInt(match[1]) : 200;
+          });
+          const maxNumber = Math.max(...numbers);
+          nextNumber = maxNumber + 1;
+        }
+
+        const today = new Date();
+        const dateStr = today.toLocaleDateString('en-GB'); // DD/MM/YYYY
+        const quotationNo = `MGE${nextNumber}`;
+        setForm(prev => ({ ...prev, date: dateStr, quotationNo }));
       });
     };
 
     loadQuotations().catch(console.error);
-
-    const today = new Date();
-    const dateStr = today.toLocaleDateString('en-GB'); // DD/MM/YYYY
-    const quotationNo = `MGE/${Math.floor(Date.now() / 1000)}/2026`;
-    setForm(prev => ({ ...prev, date: dateStr, quotationNo }));
 
     return () => {
       if (unsubscribe) {
@@ -269,59 +280,28 @@ export default function QuotationPage() {
             padding: 0 !important;
             line-height: 1.4 !important;
           }
+          .watermark {
+            display: block !important;
+          }
+          .watermark img {
+            opacity: 0.1 !important;
+          }
           @page { size: A4; margin: 0; }
         }
-        body { margin: 0; padding: 0; }
       `;
       clonedElement.insertBefore(styleOverride, clonedElement.firstChild);
 
-      // Open a new window for printing (better mobile support)
-      const printWindow = window.open('', '_blank', 'width=800,height=600');
+      // Store original body content
+      const originalBody = document.body.innerHTML;
 
-      if (!printWindow) {
-        alert("Please allow popups for printing");
-        return;
-      }
+      // Replace body with print content
+      document.body.innerHTML = clonedElement.outerHTML;
 
-      // Write the content to the new window
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Quotation Print</title>
-            <style>
-              @media print {
-                * {
-                  background-color: #ffffff !important;
-                  color: #000000 !important;
-                  border-color: #000000 !important;
-                  font-family: Arial, sans-serif !important;
-                  page-break-inside: avoid !important;
-                }
-                p {
-                  margin: 0 !important;
-                  padding: 0 !important;
-                  line-height: 1.4 !important;
-                }
-                @page { size: A4; margin: 0; }
-              }
-              body { margin: 0; padding: 0; }
-            </style>
-          </head>
-          <body>
-            ${clonedElement.innerHTML}
-          </body>
-        </html>
-      `);
+      // Print
+      window.print();
 
-      printWindow.document.close();
-
-      // Wait for content to load, then print
-      printWindow.onload = () => {
-        printWindow.print();
-        // Close the window after printing (optional)
-        printWindow.close();
-      };
+      // Restore original body
+      document.body.innerHTML = originalBody;
 
       // Restore original form data
       if (quotationData) {
@@ -367,21 +347,26 @@ export default function QuotationPage() {
       </div>
       )}
 
-      {/* 📄 PDF - Always rendered but off-screen for employees */}
-      <div className={`flex justify-center ${isEmployee ? 'absolute left-[-9999px] opacity-0' : ''}`}>
+      {/* 📄 PDF - Always rendered but hidden for employees */}
+      <div className={`flex justify-center ${isEmployee ? 'hidden' : ''}`}>
         <div id="pdf-content" className="bg-white">
 
           {/* ================= PAGE 1 ================= */}
           <div className="w-[794px] h-[1123px] p-6 relative">
 
             {/* Watermark */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-10">
+            <div className="absolute inset-0 flex items-center justify-center opacity-10 watermark">
               <img src="/mgsolarlogo.jpeg" alt="logo" width={400} height={400}/>
             </div>
 
             {/* Header Image */}
             <div className="relative z-10">
               <img src="/mgsolarheader.png" alt="header" width={754} height={50} className="w-full"/>
+            </div>
+
+            {/* Quotation Number */}
+            <div className="absolute top-6 right-6 text-sm font-bold z-20">
+              Quotation No: {form.quotationNo}
             </div>
 
             {/* TO SECTION */}
@@ -442,7 +427,7 @@ export default function QuotationPage() {
           <div className="w-[794px] h-[1123px] p-6 relative">
 
             {/* Watermark */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-10">
+            <div className="absolute inset-0 flex items-center justify-center opacity-10 watermark">
               <img src="/mgsolarlogo.jpeg" alt="logo" width={400} height={400}/>
             </div>
 
@@ -484,7 +469,7 @@ export default function QuotationPage() {
               </div>
 
               <div className="flex-1 text-sm border border-gray-300 p-2 bg-gray-50">
-                <h2 className="font-black">Bank Details</h2>
+                <h2 className="font-bold">Company Bank Details</h2>
                 <p>Bank Name: Punjab National Bank</p>
                 <p>Account No.: 6193002100003379</p>
                 <p>IFSC: PUNB0619300</p>
@@ -527,7 +512,7 @@ export default function QuotationPage() {
           <div className="w-[794px] h-[1123px] p-6 relative">
 
             {/* Watermark */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-10">
+            <div className="absolute inset-0 flex items-center justify-center opacity-10 watermark">
               <img src="/mgsolarlogo.jpeg" alt="logo" width={400} height={400}/>
             </div>
 
@@ -583,7 +568,7 @@ export default function QuotationPage() {
           <div className="w-[794px] h-[1123px] p-6 relative">
 
             {/* Watermark */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-10">
+            <div className="absolute inset-0 flex items-center justify-center opacity-10 watermark">
               <img src="/mgsolarlogo.jpeg" alt="logo" width={400} height={400}/>
             </div>
 
@@ -598,7 +583,7 @@ export default function QuotationPage() {
 
               <p><strong>The Second Party hereby undertakes to perform the following activities:</strong></p>
 
-              <ol className="list-decimal list-inside space-y-1">
+              <ol className="list-decimal list-inside space-y-2">
                 <li>The Vendor must follow all the standards and safety guidelines prescribed under state regulations and technical standards prescribed by MNRE for RTS projects, failing which the vendor is liable for blacklisting from participation in the govt. project/ scheme and other penal actions in accordance with the law. The responsibility of supply, installation and commissioning of the rooftop solar project/system in complete compliance with MNRE scheme guidelines lies with the Vendor.</li>
                 <li>Site Survey: Site visit, survey and development of detailed project report for installation of RTS system. This also includes, feasibility study of roof, strength of roof and shadow free area. If any additional work or customization is involved for the plant installation as per site condition and requirement of the consumer building, the Vendor shall prepare an estimate and can raise separate invoice including GST in addition to the amount towards standard plant cost. The consumer shall pay the amount for such additional work directly to the Vendor.</li>
                 <li>Design & Engineering: Design of plant along with drawings and selection of components as per standard provided by the DISCOM/SERC/MNRE for best performance and safety of the plant.</li>
@@ -619,7 +604,7 @@ export default function QuotationPage() {
           <div className="w-[794px] h-[1123px] p-6 relative">
 
             {/* Watermark */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-10">
+            <div className="absolute inset-0 flex items-center justify-center opacity-10 watermark">
               <img src="/mgsolarlogo.jpeg" alt="logo" width={400} height={400}/>
             </div>
 
@@ -654,7 +639,7 @@ export default function QuotationPage() {
           <div className="w-[794px] h-[1123px] p-6 relative">
 
             {/* Watermark */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-10">
+            <div className="absolute inset-0 flex items-center justify-center opacity-10 watermark">
               <img src="/mgsolarlogo.jpeg" alt="logo" width={400} height={400}/>
             </div>
 
@@ -691,7 +676,7 @@ export default function QuotationPage() {
             </div>
 
             {/* FOOTER PAGE 6 */}
-            <div className="absolute bottom-6 left-10 right-10">
+            <div className="absolute bottom-4 left-10 right-10">
               <img src="/mgsolarfooter.png" alt="footer" width={754} height={20} className="w-full"/>
             </div>
           </div>
@@ -713,14 +698,12 @@ export default function QuotationPage() {
                   <h3 className="font-semibold">{quotation.customerName}</h3>
                   <p className="text-sm text-gray-600">{quotation.quotationNo}</p>
                 </div>
-                {!isEmployee && (
-                  <button
-                    onClick={() => printQuotation(quotation)}
-                    className="bg-blue-500 text-white px-3 py-1 text-sm rounded"
-                  >
-                    Print
-                  </button>
-                )}
+                <button
+                  onClick={() => printQuotation(quotation)}
+                  className="bg-blue-500 text-white px-3 py-1 text-sm rounded"
+                >
+                  Print
+                </button>
               </div>
               <div className="text-sm text-gray-600 space-y-1">
                 <p><span className="font-medium">Mobile:</span> {quotation.mobileNumber}</p>
@@ -755,18 +738,16 @@ export default function QuotationPage() {
                   <TableCell>{quotation.kilowatt} KW</TableCell>
                   <TableCell>₹{quotation.price}</TableCell>
                   <TableCell>{new Date(quotation.createdAt).toLocaleDateString()}</TableCell>
-                   <TableCell className="text-center">
-                    {!isEmployee && (
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          printQuotation(quotation);
-                        }}
-                        className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
-                      >
-                        Print
-                      </button>
-                    )}
+                  <TableCell className="text-center">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        printQuotation(quotation);
+                      }}
+                      className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
+                    >
+                      Print
+                    </button>
                   </TableCell>
                 </TableRow>
               ))}
