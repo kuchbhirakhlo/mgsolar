@@ -17,11 +17,9 @@ export function Footer() {
             </p>
             <p className="text-blue-100 text-sm">
               <strong>Address:</strong> Chetna Towers, D-62, Vibhuti Khand, Gomti Nagar, Lucknow, Uttar Pradesh 226010<br />
-              <strong>Phone:</strong> +91 6307868355
+              <strong>Phone:</strong> +916307868355
             </p>
-                       
           </div>
-
           <div>
             <h3 className="font-semibold mb-4">{t.footer.company}</h3>
             <ul className="space-y-2 text-sm text-blue-100">
