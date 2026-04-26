@@ -591,19 +591,20 @@ export default function AdminPaymentsPage() {
                 <Card key={payment.id} className="border">
                   <CardContent className="p-4">
                     <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <h3 className="font-semibold">{payment.customerName || cust?.customerName || `Customer ${payment.customerId.slice(-6)}`}</h3>
-                            <div className="flex gap-1">
-                              <Button size="sm" variant="outline" onClick={() => handleEmployeeView(payment)}>
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                              {!isEmployee && (
-                                <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleEmployeeDelete(payment.id)}>
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              )}
-                            </div>
-                      </div>
+                       <div className="flex justify-between">
+                         <h3 className="font-semibold">{payment.customerName || cust?.customerName || `Customer ${payment.customerId.slice(-6)}`}</h3>
+                             <div className="flex gap-1">
+                               <Button size="sm" variant="outline" onClick={() => handleView(payment)}>
+                                 <Eye className="w-4 h-4" />
+                               </Button>
+                               <Button size="sm" variant="outline" onClick={() => handleEdit(payment)}>
+                                 <Edit2 className="w-4 h-4" />
+                               </Button>
+                               <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDelete(payment.id)}>
+                                 <Trash2 className="w-4 h-4" />
+                               </Button>
+                             </div>
+                       </div>
                       <div className="text-sm text-muted-foreground">
                         <p><span className="font-medium">Project Cost:</span> ₹{payment.projectCost}</p>
                         <p><span className="font-medium">First Payment:</span> ₹{payment.firstPayment}</p>
@@ -857,7 +858,7 @@ export default function AdminPaymentsPage() {
                             </div>
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            <p><span className="font-medium">Total Amount:</span> ₹{payment.totalAmount}</p>
+                            <p><span className="font-medium">Total Amount:</span> ₹{(parseFloat(payment.totalAmount) || 0).toLocaleString()}</p>
                             <p><span className="font-medium">Payments:</span> {payment.payments?.length || 0}</p>
                             <p><span className="font-medium">Last Payment:</span> {lastPayment ? new Date(lastPayment.createdAt).toLocaleDateString('en-GB') : 'N/A'}</p>
                           </div>
@@ -890,7 +891,7 @@ export default function AdminPaymentsPage() {
                         <TableRow key={payment.id}>
                           <TableCell>{payment.employeeName || emp?.name || `Employee ${payment.employeeId}`}</TableCell>
                           <TableCell>{payment.employeeId}</TableCell>
-                          <TableCell>₹{payment.totalAmount}</TableCell>
+                          <TableCell>₹{(parseFloat(payment.totalAmount) || 0).toLocaleString()}</TableCell>
                           <TableCell>{payment.payments?.length || 0}</TableCell>
                           <TableCell>{lastPayment ? new Date(lastPayment.createdAt).toLocaleDateString('en-GB') : 'N/A'}</TableCell>
                           <TableCell>
@@ -939,7 +940,7 @@ export default function AdminPaymentsPage() {
             <div className="space-y-4">
               <div><strong>Employee:</strong> {selectedEmployeePayment.employeeName || employees.find(e => e.empId === selectedEmployeePayment.employeeId)?.name || `Employee ${selectedEmployeePayment.employeeId}`}</div>
               <div><strong>Employee ID:</strong> {selectedEmployeePayment.employeeId}</div>
-              <div><strong>Total Amount:</strong> ₹{selectedEmployeePayment.totalAmount}</div>
+              <div><strong>Total Amount:</strong> ₹{(parseFloat(selectedEmployeePayment.totalAmount) || 0).toLocaleString()}</div>
               <div><strong>Number of Payments:</strong> {selectedEmployeePayment.payments?.length || 0}</div>
               <div className="mt-4">
                 <h4 className="font-semibold mb-2">Payment History:</h4>
