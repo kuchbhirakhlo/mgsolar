@@ -6,6 +6,30 @@ import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot, QuerySnapshot, DocumentData } from 'firebase/firestore';
 import { useFormSubmit } from '@/hooks/use-form-submit';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { pdf, Document, Page, Text, View, StyleSheet, Image as PDFImage } from '@react-pdf/renderer';
+
+// Utility function
+const numberToWords = (num: number): string => {
+  if (num === 0) return "Zero";
+
+  const belowTwenty = [
+    "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
+    "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
+    "Seventeen", "Eighteen", "Nineteen"
+  ];
+  const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+
+  const helper = (n: number): string => {
+    if (n < 20) return belowTwenty[n];
+    if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? " " + belowTwenty[n % 10] : "");
+    if (n < 1000) return belowTwenty[Math.floor(n / 100)] + " Hundred" + (n % 100 !== 0 ? " " + helper(n % 100) : "");
+    if (n < 100000) return helper(Math.floor(n / 1000)) + " Thousand" + (n % 1000 !== 0 ? " " + helper(n % 1000) : "");
+    if (n < 10000000) return helper(Math.floor(n / 100000)) + " Lakh" + (n % 100000 !== 0 ? " " + helper(n % 100000) : "");
+    return helper(Math.floor(n / 10000000)) + " Crore" + (n % 10000000 !== 0 ? " " + helper(n % 10000000) : "");
+  };
+
+  return helper(num);
+};
 
 interface Quotation {
   id: string;
@@ -24,6 +48,213 @@ interface Quotation {
   referredBy: string;
   createdAt: string;
 }
+
+// PDF Styles
+const styles = StyleSheet.create({
+  page: {
+    padding: 40,
+    fontSize: 12,
+    fontFamily: 'Helvetica',
+    position: 'relative',
+  },
+  header: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  text: {
+    marginBottom: 5,
+  },
+  table: {
+    marginTop: 20,
+    border: '1pt solid black',
+  },
+  tableRow: {
+    flexDirection: 'row',
+  },
+  tableCell: {
+    border: '1pt solid black',
+    padding: 5,
+    flex: 1,
+  },
+  watermark: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    opacity: 0.1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerImage: {
+    width: '100%',
+    height: 50,
+  },
+  footerImage: {
+    width: '100%',
+    height: 20,
+  },
+  quotationNo: {
+    position: 'absolute',
+    top: 40,
+    right: 40,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 40,
+    left: 40,
+    right: 40,
+  },
+});
+
+// PDF Component
+const QuotationPDF = ({ form }: { form: any }) => (
+  <Document>
+    {/* Page 1 */}
+    <Page size="A4" style={styles.page}>
+      <View style={styles.watermark}>
+        <PDFImage src="/mgsolarlogo.jpeg" style={{ width: 200, height: 200 }} />
+      </View>
+      <PDFImage src="/mgsolarheader.png" style={styles.headerImage} />
+      <Text style={styles.quotationNo}>Quotation No: {form.quotationNo}</Text>
+      <View style={{ marginTop: 40 }}>
+        <Text style={styles.text}>To,</Text>
+        <Text style={styles.text}>Customer Name: {form.customerName}</Text>
+        <Text style={styles.text}>Address: {form.address}</Text>
+        <Text style={styles.text}>Subject: {form.kilowatt} KW Solar Quotation for Supply & Installation of Rooftop System</Text>
+        <Text style={styles.text}>Dear Sir/Madam,</Text>
+        <Text style={styles.text}>
+          With reference to your requirement, we are pleased to submit our quotation for Supply,
+          Installation, Testing & Commissioning of a {form.kilowatt} KW Grid-Connected Solar Rooftop System at your premises.
+        </Text>
+        <Text style={styles.header}>SYSTEM DETAILS</Text>
+        <View style={styles.table}>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableCell}>S.No.</Text>
+            <Text style={styles.tableCell}>Particulars</Text>
+            <Text style={styles.tableCell}>Description</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableCell}>1</Text>
+            <Text style={styles.tableCell}>System Capacity</Text>
+            <Text style={styles.tableCell}>{form.kilowatt} KW ({form.systemType})</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableCell}>2</Text>
+            <Text style={styles.tableCell}>Solar Panels</Text>
+            <Text style={styles.tableCell}>{form.panelCompanyName}</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableCell}>3</Text>
+            <Text style={styles.tableCell}>Inverter</Text>
+            <Text style={styles.tableCell}>{form.inverterCompanyName}</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableCell}>4</Text>
+            <Text style={styles.tableCell}>Structure</Text>
+            <Text style={styles.tableCell}>GI / Aluminium Rooftop</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableCell}>5</Text>
+            <Text style={styles.tableCell}>Generation</Text>
+            <Text style={styles.tableCell}>{form.kilowatt ? (() => {
+              const kw = parseFloat(form.kilowatt.replace(/[^\d.]/g, '')) || 0;
+              const min = kw * 4;
+              const max = kw * 5;
+              return `${min}–${max} Units per Day`;
+            })() : "Units per Day"}</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableCell}>6</Text>
+            <Text style={styles.tableCell}>ACDB & DCDB</Text>
+            <Text style={styles.tableCell}>Polycab / Havells</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableCell}>7</Text>
+            <Text style={styles.tableCell}>Wire</Text>
+            <Text style={styles.tableCell}>Polycab (4 sq mm)</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableCell}>8</Text>
+            <Text style={styles.tableCell}>Earthing</Text>
+            <Text style={styles.tableCell}>Green (4 sq mm)</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableCell}>9</Text>
+            <Text style={styles.tableCell}>Warranty</Text>
+            <Text style={styles.tableCell}>Panel: 25+ Years, Inverter: 5–10 Years</Text>
+          </View>
+        </View>
+      </View>
+      <View style={styles.footer}>
+        <PDFImage src="/mgsolarfooter.png" style={styles.footerImage} />
+      </View>
+    </Page>
+    {/* Page 2 */}
+    <Page size="A4" style={styles.page}>
+      <View style={styles.watermark}>
+        <PDFImage src="/mgsolarlogo.jpeg" style={{ width: 200, height: 200 }} />
+      </View>
+      <PDFImage src="/mgsolarheader.png" style={styles.headerImage} />
+      <View style={{ marginTop: 40 }}>
+        <Text style={styles.header}>PRICE BREAKUP</Text>
+        <View style={styles.table}>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableCell}>{form.kilowatt} KW Solar Rooftop System</Text>
+            <Text style={styles.tableCell}>₹ {form.price}/-</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableCell}>Installation & Commissioning</Text>
+            <Text style={styles.tableCell}>Included</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableCell}>Transportation</Text>
+            <Text style={styles.tableCell}>Not Included</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableCell}>Net Metering Assistance</Text>
+            <Text style={styles.tableCell}>Included</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableCell}>GST</Text>
+            <Text style={styles.tableCell}>Included</Text>
+          </View>
+          <View style={[styles.tableRow, { fontWeight: 'bold' }]}>
+            <Text style={styles.tableCell}>Total Amount Payable</Text>
+            <Text style={styles.tableCell}>₹ {form.price}/-</Text>
+          </View>
+        </View>
+        <Text style={styles.text}>(Amount in words: Rupees {numberToWords(parseInt(form.price || '0'))} Only)</Text>
+        <Text style={styles.header}>TERMS & CONDITIONS</Text>
+        <Text style={styles.text}>Validity of quotation: 15 days</Text>
+        <Text style={styles.text}>Installation Timeline: 15–25 Working Days</Text>
+        <Text style={styles.text}>Net metering subject to DISCOM approval.</Text>
+        <Text style={styles.text}>System generation depends on sunlight & site conditions.</Text>
+        <Text style={styles.text}>Payment Terms: 70% Advance, 20% Before Installation, 10% After Commissioning</Text>
+        <Text style={styles.text}>Operation & maintenance charges are not included in this price.</Text>
+        <Text style={styles.header}>Company Bank Details</Text>
+        <Text style={styles.text}>Bank Name: Punjab National Bank</Text>
+        <Text style={styles.text}>Account No.: 6193002100003379</Text>
+        <Text style={styles.text}>IFSC: PUNB0619300</Text>
+        <Text style={styles.text}>Branch: Vibhuti Khand, Gomti Nagar, Lucknow</Text>
+        <Text style={styles.header}>DECLARATION</Text>
+        <Text style={styles.text}>We hereby declare that the above quotation is true and correct.</Text>
+        <Text style={styles.text}>All materials supplied will be new and of standard quality.</Text>
+        <Text style={styles.text}>Installation will be carried out as per site conditions and applicable norms.</Text>
+        <Text style={styles.text}>Warranties shall be as per manufacturer terms.</Text>
+        <Text style={styles.text}>Prices and approvals are subject to applicable rules and regulations.</Text>
+        <Text style={styles.text}>Consumer Name: {form.customerName}</Text>
+        <Text style={styles.text}>Authorized Signatory M.G. ENTERPRISES</Text>
+      </View>
+      <View style={styles.footer}>
+        <PDFImage src="/mgsolarfooter.png" style={styles.footerImage} />
+      </View>
+    </Page>
+  </Document>
+);
 
 export default function QuotationPage() {
   const [isEmployee, setIsEmployee] = useState(false);
@@ -178,27 +409,7 @@ export default function QuotationPage() {
     }
   };
 
-  const numberToWords = (num: number): string => {
-    if (num === 0) return "Zero";
 
-    const belowTwenty = [
-      "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
-      "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
-      "Seventeen", "Eighteen", "Nineteen"
-    ];
-    const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
-
-    const helper = (n: number): string => {
-      if (n < 20) return belowTwenty[n];
-      if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? " " + belowTwenty[n % 10] : "");
-      if (n < 1000) return belowTwenty[Math.floor(n / 100)] + " Hundred" + (n % 100 !== 0 ? " " + helper(n % 100) : "");
-      if (n < 100000) return helper(Math.floor(n / 1000)) + " Thousand" + (n % 1000 !== 0 ? " " + helper(n % 1000) : "");
-      if (n < 10000000) return helper(Math.floor(n / 100000)) + " Lakh" + (n % 100000 !== 0 ? " " + helper(n % 100000) : "");
-      return helper(Math.floor(n / 10000000)) + " Crore" + (n % 10000000 !== 0 ? " " + helper(n % 10000000) : "");
-    };
-
-    return helper(num);
-  };
 
   const handleSubmit = async () => {
     const submitQuotation = async () => {
@@ -249,16 +460,32 @@ export default function QuotationPage() {
       return;
     }
 
-    // Temporarily update the form data if using quotation data
-    const originalForm = { ...form };
-    if (quotationData) {
-      setForm(quotationData);
-      // Wait for state update
-      setTimeout(() => performPrint(element), 100);
-      return;
+    const isMobile = window.innerWidth < 768;
+    const dataToUse = quotationData || form;
+
+    if (isMobile) {
+      generatePDF(dataToUse);
+    } else {
+      // For desktop, still update form for HTML print
+      const originalForm = { ...form };
+      if (quotationData) {
+        setForm(quotationData);
+        setTimeout(() => performPrint(element), 100);
+        return;
+      }
+      performPrint(element);
     }
 
-    performPrint(element);
+    async function generatePDF(data: any) {
+      try {
+        const pdfBlob = await pdf(React.createElement(QuotationPDF, { form: data })).toBlob();
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        window.open(pdfUrl, '_blank');
+      } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('Error generating PDF');
+      }
+    }
 
     function performPrint(printElement: HTMLElement) {
       // Clone the element to avoid modifying the original
@@ -286,7 +513,7 @@ export default function QuotationPage() {
           .watermark img {
             opacity: 0.1 !important;
           }
-          @page { size: A4; margin: 0; }
+          @page { size: auto; margin: 0; }
         }
       `;
       clonedElement.insertBefore(styleOverride, clonedElement.firstChild);
@@ -702,7 +929,7 @@ export default function QuotationPage() {
                   onClick={() => printQuotation(quotation)}
                   className="bg-blue-500 text-white px-3 py-1 text-sm rounded"
                 >
-                  Print
+                  Print PDF
                 </button>
               </div>
               <div className="text-sm text-gray-600 space-y-1">
