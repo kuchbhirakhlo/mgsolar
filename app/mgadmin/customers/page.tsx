@@ -20,7 +20,7 @@ interface Customer {
   customerName: string;
   address: string;
   pincode: string;
-  aadharCard: string;
+  aadharCard?: string;
   panCard: string;
   mobileNumber: string;
   electricityBillNumber: string;
@@ -34,9 +34,9 @@ interface Customer {
   bankAddress: string;
   quotationPrice: string;
   dealPrice: string;
-  wireType: string;
   acWireBrand?: string;
   dcWireBrand?: string;
+  earthingWire?: string;
   createdBy?: string; // Employee ID who created this customer
 }
 
@@ -94,9 +94,9 @@ export default function AdminCustomersPage() {
     bankAddress: '',
     quotationPrice: '',
     dealPrice: '',
-    wireType: '',
     acWireBrand: '',
     dcWireBrand: '',
+    earthingWire: '',
     assignedEmployee: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -188,8 +188,7 @@ export default function AdminCustomersPage() {
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     const requiredFields = [
-      'systemType', 'customerName', 'address', 'pincode', 'aadharCard', 'mobileNumber', 'electricityBillNumber',
-      'kilowatt', 'panelCompanyName', 'inverterCompanyName', 'referredBy'
+      'systemType', 'customerName', 'address', 'pincode', 'mobileNumber', 'electricityBillNumber', 'kilowatt', 'panelCompanyName', 'inverterCompanyName', 'referredBy', 'quotationPrice', 'dealPrice'
     ];
 
     requiredFields.forEach(field => {
@@ -236,9 +235,9 @@ export default function AdminCustomersPage() {
       bankAddress: customer.bankAddress || '',
       quotationPrice: customer.quotationPrice || '',
       dealPrice: customer.dealPrice || '',
-      wireType: customer.wireType || '',
       acWireBrand: customer.acWireBrand || '',
       dcWireBrand: customer.dcWireBrand || '',
+      earthingWire: customer.earthingWire || '',
       assignedEmployee: customer.createdBy || '',
     });
     setIsEditing(true);
@@ -419,9 +418,9 @@ export default function AdminCustomersPage() {
           bankAddress: '',
           quotationPrice: '',
           dealPrice: '',
-          wireType: '',
           acWireBrand: '',
           dcWireBrand: '',
+          earthingWire: '',
           assignedEmployee: '',
         });
         setShowForm(false);
@@ -583,15 +582,13 @@ export default function AdminCustomersPage() {
                   {errors.pincode && <p className="text-red-500 text-sm">{errors.pincode}</p>}
                 </div>
                 <div>
-                  <Label htmlFor="aadharCard">Aadhar Card <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="aadharCard">Aadhar Card</Label>
                   <Input
                     id="aadharCard"
                     name="aadharCard"
                     value={formData.aadharCard}
                     onChange={handleChange}
-                    className={errors.aadharCard ? 'border-red-500' : ''}
                   />
-                  {errors.aadharCard && <p className="text-red-500 text-sm">{errors.aadharCard}</p>}
                 </div>
                 <div>
                   <Label htmlFor="panCard">PAN Card</Label>
@@ -708,7 +705,7 @@ export default function AdminCustomersPage() {
                 <h3 className="text-lg font-semibold mb-4">Solar Specifications</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="quotationPrice">Quotation Price</Label>
+                    <Label htmlFor="quotationPrice">Quotation Price <span className="text-red-500">*</span></Label>
                     <Input
                       id="quotationPrice"
                       name="quotationPrice"
@@ -720,61 +717,57 @@ export default function AdminCustomersPage() {
                     {errors.quotationPrice && <p className="text-red-500 text-sm">{errors.quotationPrice}</p>}
                   </div>
                   <div>
-                    <Label htmlFor="dealPrice">Deal Price</Label>
+                    <Label htmlFor="dealPrice">Deal Price <span className="text-red-500">*</span></Label>
                     <Input
                       id="dealPrice"
                       name="dealPrice"
                       type="number"
                       value={formData.dealPrice}
                       onChange={handleChange}
+                      className={errors.dealPrice ? 'border-red-500' : ''}
                     />
+                    {errors.dealPrice && <p className="text-red-500 text-sm">{errors.dealPrice}</p>}
                   </div>
                 </div>
               </div>
 
               <div className="border-t pt-6">
                 <h3 className="text-lg font-semibold mb-4">Wire Details</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <Label htmlFor="wireType">Wire Type</Label>
-                    <Select value={formData.wireType} onValueChange={(value) => handleSelectChange('wireType', value)}>
+                    <Label htmlFor="acWireBrand">AC Wire Brand</Label>
+                    <Select value={formData.acWireBrand} onValueChange={(value) => handleSelectChange('acWireBrand', value)}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select wire type" />
+                        <SelectValue placeholder="Select AC wire brand" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="ac">AC Wire</SelectItem>
-                        <SelectItem value="dc">DC Wire</SelectItem>
+                        <SelectItem value="havels">Havels</SelectItem>
+                        <SelectItem value="polycab">Polycab</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  {formData.wireType === 'ac' && (
-                    <div>
-                      <Label htmlFor="acWireBrand">AC Wire Brand</Label>
-                      <Select value={formData.acWireBrand} onValueChange={(value) => handleSelectChange('acWireBrand', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select brand" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="havels">Havels</SelectItem>
-                          <SelectItem value="polycab">Polycab</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                  {formData.wireType === 'dc' && (
-                    <div>
-                      <Label htmlFor="dcWireBrand">DC Wire Brand</Label>
-                      <Select value={formData.dcWireBrand} onValueChange={(value) => handleSelectChange('dcWireBrand', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select brand" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="havels">Havels</SelectItem>
-                          <SelectItem value="polycab">Polycab</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
+                  <div>
+                    <Label htmlFor="dcWireBrand">DC Wire Brand</Label>
+                    <Select value={formData.dcWireBrand} onValueChange={(value) => handleSelectChange('dcWireBrand', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select DC wire brand" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="havels">Havels</SelectItem>
+                        <SelectItem value="polycab">Polycab</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="earthingWire">Earthing Wire</Label>
+                    <Input
+                      id="earthingWire"
+                      name="earthingWire"
+                      value={formData.earthingWire}
+                      onChange={handleChange}
+                      placeholder="Enter earthing wire details"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -945,9 +938,11 @@ export default function AdminCustomersPage() {
               <div><strong>IFSC:</strong> {selectedCustomer.bankIfscCode}</div>
               <div><strong>Bank Name:</strong> {selectedCustomer.bankName}</div>
               <div><strong>Bank Address:</strong> {selectedCustomer.bankAddress}</div>
-              <div><strong>Quotation Price:</strong> {selectedCustomer.quotationPrice}</div>
-              <div><strong>Deal Price:</strong> {selectedCustomer.dealPrice}</div>
-              <div><strong>Wire Type:</strong> {selectedCustomer.wireType}</div>
+               <div><strong>Quotation Price:</strong> {selectedCustomer.quotationPrice}</div>
+               <div><strong>Deal Price:</strong> {selectedCustomer.dealPrice}</div>
+               <div><strong>AC Wire Brand:</strong> {selectedCustomer.acWireBrand}</div>
+               <div><strong>DC Wire Brand:</strong> {selectedCustomer.dcWireBrand}</div>
+               <div><strong>Earthing Wire:</strong> {selectedCustomer.earthingWire}</div>
             </div>
           )}
         </DialogContent>

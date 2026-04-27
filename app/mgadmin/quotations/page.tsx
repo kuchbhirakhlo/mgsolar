@@ -6,7 +6,7 @@ import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot, QuerySnapshot, DocumentData } from 'firebase/firestore';
 import { useFormSubmit } from '@/hooks/use-form-submit';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { pdf, Document, Page, Text, View, StyleSheet, Image as PDFImage } from '@react-pdf/renderer';
+import { pdf, Document, Page, Text, View, StyleSheet, Image as PDFImage, DocumentProps } from '@react-pdf/renderer';
 
 // Utility function
 const numberToWords = (num: number): string => {
@@ -391,7 +391,6 @@ export default function QuotationPage() {
               panelCompanyName: customer.panelCompanyName || "",
               inverterCompanyName: customer.inverterCompanyName || "",
               referredBy: customer.referredBy || "",
-              referredBy: customer.referredBy || "",
               price: customer.quotationPrice || "",
             }));
           }
@@ -498,7 +497,7 @@ export default function QuotationPage() {
 
     async function generatePDF(data: any) {
       try {
-        const pdfBlob = await pdf(React.createElement(QuotationPDF, { form: data })).toBlob();
+        const pdfBlob = await pdf(React.createElement(QuotationPDF, { form: data }) as React.ReactElement<DocumentProps>).toBlob();
         const pdfUrl = URL.createObjectURL(pdfBlob);
         window.open(pdfUrl, '_blank');
       } catch (error) {

@@ -107,11 +107,8 @@ export function Footer() {
                 </Link>
               </li>
             </ul>
-          </div>
-          
+          </div>         
         </div>
-        
-
         <div className="border-t border-white/10 pt-8 flex justify-between text-sm text-blue-100">
           <p>
             © 2024 MG Solar. All rights reserved.
