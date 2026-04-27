@@ -3,8 +3,8 @@
 import { useLanguage } from '@/lib/language-context';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import Image from 'next/image';
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useRef } from 'react';
 
 export function HeroSection() {
   const { t } = useLanguage();
@@ -17,10 +17,16 @@ export function HeroSection() {
   });
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowPopup(true), 5000);
-    return () => clearTimeout(timer);
+    const timer = setTimeout(() => {
+      if (mountedRef.current) setShowPopup(true);
+    }, 5000);
+    return () => {
+      clearTimeout(timer);
+      mountedRef.current = false;
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,14 +43,22 @@ export function HeroSection() {
         }),
       });
       if (response.ok) {
-        setSubmitted(true);
-        setTimeout(() => setShowPopup(false), 2000);
+        if (mountedRef.current) {
+          setSubmitted(true);
+          setTimeout(() => {
+            if (mountedRef.current) setShowPopup(false);
+          }, 2000);
+        }
       } else {
-        setError('Failed to submit form. Please try again.');
+        if (mountedRef.current) {
+          setError('Failed to submit form. Please try again.');
+        }
       }
     } catch (error) {
       console.error('Error submitting form:', error);
-      setError('Network error. Please check your connection and try again.');
+      if (mountedRef.current) {
+        setError('Network error. Please check your connection and try again.');
+      }
     }
   };
 
@@ -109,13 +123,14 @@ export function HeroSection() {
           {/* Video */}
           <div className="relative h-96 md:h-full min-h-96">
             <div className="absolute inset-0 bg-gradient-to-br from-secondary/30 to-white/10 rounded-2xl overflow-hidden">
-          <Image           
-           src="/homeheroimage.jpg"
-             alt="Hero Video"
-             fill
-             className="object-cover rounded-2xl"
-             suppressHydrationWarning
-           />
+              <video
+                src="/herovideo.mp4"
+                autoPlay
+                muted
+                loop
+                className="object-cover rounded-2xl w-full h-full"
+                suppressHydrationWarning
+              />
             </div>
           </div>
         </div>

@@ -112,9 +112,12 @@ export function Footer() {
         </div>
         
 
-        <div className="border-t border-white/10 pt-8 text-center text-sm text-blue-100">
+        <div className="border-t border-white/10 pt-8 flex justify-between text-sm text-blue-100">
           <p>
-            &copy; 2024 {t.footer.company}. {t.footer.rights}.
+            © 2024 MG Solar. All rights reserved.
+          </p>
+          <p>
+            Powered By <a href="http://procotech.in" className="hover:text-secondary transition">Proco Technologies</a>
           </p>
         </div>
       </div>

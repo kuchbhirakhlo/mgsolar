@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, X, Eye, Edit2, Trash2, Loader2, Download } from 'lucide-react';
 import { useFormSubmit } from '@/hooks/use-form-submit';
@@ -74,6 +74,7 @@ export default function AdminInstallationsPage() {
   const [photo, setPhoto] = useState<File | null>(null);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const mountedRef = useRef(true);
   const { isLoading, submitForm } = useFormSubmit();
 
   useEffect(() => {
@@ -87,6 +88,9 @@ export default function AdminInstallationsPage() {
       }
       setEmployeeData(empData);
     }
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -97,7 +101,9 @@ export default function AdminInstallationsPage() {
         id: doc.id,
         ...doc.data()
       })) as Customer[];
-      setCustomers(customersData);
+      if (mountedRef.current) {
+        setCustomers(customersData);
+      }
     });
 
     const installationsRef = collection(db, 'installations');
@@ -113,7 +119,9 @@ export default function AdminInstallationsPage() {
         filteredData = installationsData.filter(inst => inst.installerName === employeeData.name);
       }
 
-      setInstallations(filteredData);
+      if (mountedRef.current) {
+        setInstallations(filteredData);
+      }
     });
 
     // Load installers for admin dropdown
@@ -730,23 +738,20 @@ export default function AdminInstallationsPage() {
               <div><strong>Special Notes:</strong> {selectedInstallation.specialNotes}</div>
               <div><strong>Date:</strong> {new Date(selectedInstallation.createdAt).toLocaleDateString()}</div>
               {selectedInstallation.latitude && <div><strong>Location:</strong> {selectedInstallation.latitude}, {selectedInstallation.longitude}</div>}
-               {selectedInstallation.photoUrl && (
-                 <div>
-                   <div className="flex items-center justify-between mb-2">
-                     <strong>Photo:</strong>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDownloadPhoto(selectedInstallation.photoUrl!, selectedInstallation.id)}
-                        className="flex items-center gap-2"
-                      >
-                       <Download className="w-4 h-4" />
-                       Download
-                     </Button>
-                   </div>
-                   <img src={selectedInstallation.photoUrl} alt="Installation photo" className="max-w-full h-auto rounded-lg shadow-sm" />
-                 </div>
-               )}
+                {selectedInstallation.photoUrl && (
+                  <div>
+                    <strong>Photo:</strong>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDownloadPhoto(selectedInstallation.photoUrl!, selectedInstallation.id)}
+                      className="flex items-center gap-2 ml-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download
+                    </Button>
+                  </div>
+                )}
             </div>
           )}
         </DialogContent>

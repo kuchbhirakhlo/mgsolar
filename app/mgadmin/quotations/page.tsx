@@ -247,12 +247,13 @@ const QuotationPDF = ({ form }: { form: any }) => (
         <Text style={styles.text}>Warranties shall be as per manufacturer terms.</Text>
         <Text style={styles.text}>Prices and approvals are subject to applicable rules and regulations.</Text>
         <Text style={styles.text}>Consumer Name: {form.customerName}</Text>
-        <Text style={styles.text}>Authorized Signatory M.G. ENTERPRISES</Text>
-      </View>
-      <View style={styles.footer}>
-        <PDFImage src="/mgsolarfooter.png" style={styles.footerImage} />
-      </View>
-    </Page>
+         <Text style={styles.text}>Authorized Signatory M.G. ENTERPRISES</Text>
+         <PDFImage src="/mohar.png" style={{ width: 100, height: 50, marginTop: 10, alignSelf: 'flex-end' }} />
+       </View>
+       <View style={styles.footer}>
+         <PDFImage src="/mgsolarfooter.png" style={styles.footerImage} />
+       </View>
+     </Page>
   </Document>
 );
 
@@ -260,7 +261,9 @@ export default function QuotationPage() {
   const [isEmployee, setIsEmployee] = useState(false);
   const [employeeData, setEmployeeData] = useState<any>(null);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
+  const [isPrinting, setIsPrinting] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
 
   const [form, setForm] = useState({
     quotationNo: "",
@@ -281,6 +284,12 @@ export default function QuotationPage() {
 
 
   const { isLoading, submitForm } = useFormSubmit();
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     const employeeDataStr = sessionStorage.getItem('employeeData');
@@ -317,23 +326,25 @@ export default function QuotationPage() {
           );
         }
 
-        setQuotations(filteredQuotations.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        if (mountedRef.current) {
+          setQuotations(filteredQuotations.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
 
-        // Compute next quotation number
-        let nextNumber = 201;
-        if (filteredQuotations.length > 0) {
-          const numbers = filteredQuotations.map(q => {
-            const match = q.quotationNo.match(/^MGE(\d+)$/);
-            return match ? parseInt(match[1]) : 200;
-          });
-          const maxNumber = Math.max(...numbers);
-          nextNumber = maxNumber + 1;
+          // Compute next quotation number
+          let nextNumber = 201;
+          if (filteredQuotations.length > 0) {
+            const numbers = filteredQuotations.map(q => {
+              const match = q.quotationNo.match(/^MGE(\d+)$/);
+              return match ? parseInt(match[1]) : 200;
+            });
+            const maxNumber = Math.max(...numbers);
+            nextNumber = maxNumber + 1;
+          }
+
+          const today = new Date();
+          const dateStr = today.toLocaleDateString('en-GB'); // DD/MM/YYYY
+          const quotationNo = `MGE${nextNumber}`;
+          setForm(prev => ({ ...prev, date: dateStr, quotationNo }));
         }
-
-        const today = new Date();
-        const dateStr = today.toLocaleDateString('en-GB'); // DD/MM/YYYY
-        const quotationNo = `MGE${nextNumber}`;
-        setForm(prev => ({ ...prev, date: dateStr, quotationNo }));
       });
     };
 
@@ -368,35 +379,40 @@ export default function QuotationPage() {
           const customer = data.customer;
           // Extract only numbers from kilowatt (remove 'kw' text)
           const kilowattValue = customer.kilowatt ? customer.kilowatt.toString().replace(/[^\d.]/g, '') : "";
-          setForm(prev => ({
-            ...prev,
-            customerId: customer.id,
-            customerName: customer.customerName || "",
-            address: customer.address || "",
-            email: customer.email || "",
-            systemType: customer.systemType || "",
-            kilowatt: kilowattValue,
-            panelCompanyName: customer.panelCompanyName || "",
-            inverterCompanyName: customer.inverterCompanyName || "",
-            referredBy: customer.referredBy || "",
-            price: customer.quotationPrice || "",
-          }));
+          if (mountedRef.current) {
+            setForm(prev => ({
+              ...prev,
+              customerId: customer.id,
+              customerName: customer.customerName || "",
+              address: customer.address || "",
+              email: customer.email || "",
+              systemType: customer.systemType || "",
+              kilowatt: kilowattValue,
+              panelCompanyName: customer.panelCompanyName || "",
+              inverterCompanyName: customer.inverterCompanyName || "",
+              referredBy: customer.referredBy || "",
+              referredBy: customer.referredBy || "",
+              price: customer.quotationPrice || "",
+            }));
+          }
         } else {
           alert("Customer not found");
           // Reset if not found
-          setForm(prev => ({
-            ...prev,
-            customerId: "",
-            customerName: "",
-            address: "",
-            email: "",
-            systemType: "",
-            kilowatt: "",
-            panelCompanyName: "",
-            inverterCompanyName: "",
-            referredBy: "",
-            price: "",
-          }));
+          if (mountedRef.current) {
+            setForm(prev => ({
+              ...prev,
+              customerId: "",
+              customerName: "",
+              address: "",
+              email: "",
+              systemType: "",
+              kilowatt: "",
+              panelCompanyName: "",
+              inverterCompanyName: "",
+              referredBy: "",
+              price: "",
+            }));
+          }
         }
       } catch (error) {
         console.error("Error fetching customer:", error);
@@ -453,10 +469,14 @@ export default function QuotationPage() {
   };
 
   const printQuotation = (quotationData?: Quotation) => {
+    if (isPrinting) return;
+    setIsPrinting(true);
+
     const element = document.getElementById("pdf-content");
 
     if (!element) {
       alert("Print content not found");
+      setIsPrinting(false);
       return;
     }
 
@@ -470,10 +490,10 @@ export default function QuotationPage() {
       const originalForm = { ...form };
       if (quotationData) {
         setForm(quotationData);
-        setTimeout(() => performPrint(element), 100);
+        setTimeout(() => performPrint(element, originalForm), 500);
         return;
       }
-      performPrint(element);
+      performPrint(element, originalForm);
     }
 
     async function generatePDF(data: any) {
@@ -484,10 +504,12 @@ export default function QuotationPage() {
       } catch (error) {
         console.error('Error generating PDF:', error);
         alert('Error generating PDF');
+      } finally {
+        setIsPrinting(false);
       }
     }
 
-    function performPrint(printElement: HTMLElement) {
+    function performPrint(printElement: HTMLElement, originalForm: any) {
       // Clone the element to avoid modifying the original
       const clonedElement = printElement.cloneNode(true) as HTMLElement;
 
@@ -534,6 +556,7 @@ export default function QuotationPage() {
       if (quotationData) {
         setForm(originalForm);
       }
+      setIsPrinting(false);
     }
   };
 
@@ -564,8 +587,8 @@ export default function QuotationPage() {
         </div>
 
         <div className="flex gap-4 mt-3">
-          <button onClick={() => printQuotation()} className="bg-black text-white px-4 py-2">
-            Print
+          <button onClick={() => printQuotation()} className="bg-black text-white px-4 py-2" disabled={isPrinting}>
+            {isPrinting ? 'Printing...' : 'Print'}
           </button>
           <button onClick={handleSubmit} className="bg-blue-500 text-white px-4 py-2" disabled={isLoading}>
             {isLoading ? 'Saving...' : 'Save Quotation'}
@@ -896,6 +919,7 @@ export default function QuotationPage() {
                 <div className="text-center">
                   <p><strong>Second Party</strong></p>
                   <p>M.G. ENTERPRISES</p>
+                  <img src="/mohar.png" alt="Authorised Signatory MG Enterprises" width={100} height={50} className="mt-2" />
                   <p className="mt-4">Sign:</p>
                   <p>___________________________</p>
                 </div>
@@ -928,8 +952,9 @@ export default function QuotationPage() {
                 <button
                   onClick={() => printQuotation(quotation)}
                   className="bg-blue-500 text-white px-3 py-1 text-sm rounded"
+                  disabled={isPrinting}
                 >
-                  Print PDF
+                  {isPrinting ? 'Printing...' : 'Print PDF'}
                 </button>
               </div>
               <div className="text-sm text-gray-600 space-y-1">
@@ -972,8 +997,9 @@ export default function QuotationPage() {
                         printQuotation(quotation);
                       }}
                       className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
+                      disabled={isPrinting}
                     >
-                      Print
+                      {isPrinting ? 'Printing...' : 'Print'}
                     </button>
                   </TableCell>
                 </TableRow>
