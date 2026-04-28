@@ -247,8 +247,8 @@ const QuotationPDF = ({ form }: { form: any }) => (
         <Text style={styles.text}>Warranties shall be as per manufacturer terms.</Text>
         <Text style={styles.text}>Prices and approvals are subject to applicable rules and regulations.</Text>
         <Text style={styles.text}>Consumer Name: {form.customerName}</Text>
-         <Text style={styles.text}>Authorized Signatory M.G. ENTERPRISES</Text>
-         <PDFImage src="/mohar.png" style={{ width: 100, height: 50, marginTop: 10, alignSelf: 'flex-end' }} />
+        <PDFImage src="/mohar.png" style={{ width: 100, height: 50, marginTop: 10, alignSelf: 'flex-end' }} />
+        <Text style={styles.text}>Authorized Signatory M.G. ENTERPRISES</Text>
        </View>
        <View style={styles.footer}>
          <PDFImage src="/mgsolarfooter.png" style={styles.footerImage} />
@@ -262,6 +262,8 @@ export default function QuotationPage() {
   const [employeeData, setEmployeeData] = useState<any>(null);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const mountedRef = useRef(true);
 
@@ -327,7 +329,7 @@ export default function QuotationPage() {
         }
 
         if (mountedRef.current) {
-          setQuotations(filteredQuotations.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+          setQuotations(filteredQuotations.sort((a, b) => a.customerName.localeCompare(b.customerName)));
 
           // Compute next quotation number
           let nextNumber = 201;
@@ -426,28 +428,75 @@ export default function QuotationPage() {
 
 
 
+  const handleEdit = (quotation: Quotation) => {
+    setSelectedQuotation(quotation);
+    setForm({
+      quotationNo: quotation.quotationNo,
+      date: quotation.date,
+      customerId: quotation.customerId,
+      customerName: quotation.customerName,
+      address: quotation.address,
+      price: quotation.price,
+      mobileNumber: quotation.mobileNumber,
+      email: quotation.email,
+      systemType: quotation.systemType,
+      kilowatt: quotation.kilowatt,
+      panelCompanyName: quotation.panelCompanyName,
+      inverterCompanyName: quotation.inverterCompanyName,
+      referredBy: quotation.referredBy,
+    });
+    setIsEditing(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this quotation?')) {
+      try {
+        await deleteDoc(doc(db, 'quotations', id));
+        // Firestore onSnapshot will update the state automatically
+      } catch (error) {
+        console.error('Error deleting quotation:', error);
+        alert('Error deleting quotation');
+      }
+    }
+  };
+
   const handleSubmit = async () => {
     const submitQuotation = async () => {
-      // Check if quotation already exists for this mobile number
-      const normalizedMobile = form.mobileNumber.replace(/\D/g, '');
-      const existingQuotation = await getDocs(query(collection(db, 'quotations'), where('mobileNumber', '==', normalizedMobile)));
-      if (!existingQuotation.empty) {
-        throw new Error('A quotation already exists for this mobile number.');
+      // Check if quotation already exists for this mobile number (only for new quotations)
+      if (!isEditing) {
+        const normalizedMobile = form.mobileNumber.replace(/\D/g, '');
+        const existingQuotation = await getDocs(query(collection(db, 'quotations'), where('mobileNumber', '==', normalizedMobile)));
+        if (!existingQuotation.empty) {
+          throw new Error('A quotation already exists for this mobile number.');
+        }
       }
 
       const quotationData = {
         ...form,
         mobileNumber: form.mobileNumber.replace(/\D/g, ''),
-        createdAt: new Date().toISOString(),
+        createdAt: isEditing && selectedQuotation ? selectedQuotation.createdAt : new Date().toISOString(),
       };
-      await addDoc(collection(db, 'quotations'), quotationData);
+
+      if (isEditing && selectedQuotation) {
+        // Update existing quotation
+        const quotationRef = doc(db, 'quotations', selectedQuotation.id);
+        await updateDoc(quotationRef, quotationData);
+      } else {
+        // Add new quotation
+        await addDoc(collection(db, 'quotations'), quotationData);
+      }
     };
 
     if (validateForm()) {
       submitForm(
         submitQuotation,
-        'Quotation saved successfully!'
-      );
+        isEditing ? 'Quotation updated successfully!' : 'Quotation saved successfully!'
+      ).then(() => {
+        setIsEditing(false);
+        setSelectedQuotation(null);
+        // Reset form for new quotation (quotationNo and date will be updated by useEffect)
+        setForm(prev => ({ ...prev, customerId: "", customerName: "", address: "", email: "", systemType: "", kilowatt: "", panelCompanyName: "", inverterCompanyName: "", referredBy: "", price: "" }));
+      });
     }
   };
 
@@ -565,7 +614,7 @@ export default function QuotationPage() {
       {/* 🔧 FORM - Only visible to admins */}
       {!isEmployee && (
         <div className="max-w-4xl mx-auto bg-white p-4 mb-6 shadow text-sm">
-        <h2 className="font-bold mb-3">Edit Quotation</h2>
+          <h2 className="font-bold mb-3">{isEditing ? 'Edit Quotation' : 'Create New Quotation'}</h2>
 
         <div className="grid grid-cols-2 gap-2">
           <input name="quotationNo" value={form.quotationNo} onChange={handleChange} className="border p-2" disabled placeholder="Quotation No"/>
@@ -590,7 +639,7 @@ export default function QuotationPage() {
             {isPrinting ? 'Printing...' : 'Print'}
           </button>
           <button onClick={handleSubmit} className="bg-blue-500 text-white px-4 py-2" disabled={isLoading}>
-            {isLoading ? 'Saving...' : 'Save Quotation'}
+            {isLoading ? (isEditing ? 'Updating...' : 'Saving...') : (isEditing ? 'Update Quotation' : 'Save Quotation')}
           </button>
         </div>
       </div>
@@ -727,7 +776,7 @@ export default function QuotationPage() {
             </div>
 
             {/* DECLARATION */}
-            <div className="mt-6 text-sm">
+            <div className="mt-2 text-[10px]">
               <h2 className="font-semibold">DECLARATION</h2>
               <p>We hereby declare that the above quotation is true and correct.</p>
               <p>All materials supplied will be new and of standard quality.</p>
@@ -737,13 +786,14 @@ export default function QuotationPage() {
             </div>
 
             {/* SIGNATURE */}
-            <div className="mt-16 flex justify-between text-sm">
+            <div className="mt-2 flex justify-between text-sm">
               <div>
                 <p>Consumer Name: {form.customerName}</p>
                 <p>Signature:</p>
               </div>
 
-              <div className="text-right">
+              <div className=" text-right">
+                <img src="/mohar.png" alt="signature" width={100} height={50} className="mb-2" />
                 <p>Authorized Signatory</p>
                 <p className="font-semibold">M.G. ENTERPRISES</p>
               </div>
@@ -941,20 +991,39 @@ export default function QuotationPage() {
 
         {/* Mobile View */}
         <div className="block md:hidden space-y-4">
-          {quotations.map((quotation) => (
+          {quotations.map((quotation, index) => (
             <div key={quotation.id} className="border rounded-lg p-4">
               <div className="flex justify-between items-start mb-2">
                 <div>
+                  <span className="text-sm text-muted-foreground">#{index + 1}</span>
                   <h3 className="font-semibold">{quotation.customerName}</h3>
                   <p className="text-sm text-gray-600">{quotation.quotationNo}</p>
                 </div>
-                <button
-                  onClick={() => printQuotation(quotation)}
-                  className="bg-blue-500 text-white px-3 py-1 text-sm rounded"
-                  disabled={isPrinting}
-                >
-                  {isPrinting ? 'Printing...' : 'Print PDF'}
-                </button>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => printQuotation(quotation)}
+                    className="bg-blue-500 text-white px-3 py-1 text-sm rounded"
+                    disabled={isPrinting}
+                  >
+                    {isPrinting ? 'Printing...' : 'Print'}
+                  </button>
+                  {!isEmployee && (
+                    <>
+                      <button
+                        onClick={() => handleEdit(quotation)}
+                        className="bg-green-500 text-white px-3 py-1 text-sm rounded"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(quotation.id)}
+                        className="bg-red-500 text-white px-3 py-1 text-sm rounded"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
               <div className="text-sm text-gray-600 space-y-1">
                 <p><span className="font-medium">Mobile:</span> {quotation.mobileNumber}</p>
@@ -971,6 +1040,7 @@ export default function QuotationPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>S.No.</TableHead>
                 <TableHead>Quotation No</TableHead>
                 <TableHead>Customer Name</TableHead>
                 <TableHead>Mobile</TableHead>
@@ -981,8 +1051,9 @@ export default function QuotationPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {quotations.map((quotation) => (
+              {quotations.map((quotation, index) => (
                 <TableRow key={quotation.id}>
+                  <TableCell>{index + 1}</TableCell>
                   <TableCell>{quotation.quotationNo}</TableCell>
                   <TableCell>{quotation.customerName}</TableCell>
                   <TableCell>{quotation.mobileNumber}</TableCell>
@@ -990,16 +1061,40 @@ export default function QuotationPage() {
                   <TableCell>₹{quotation.price}</TableCell>
                   <TableCell>{new Date(quotation.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell className="text-center">
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        printQuotation(quotation);
-                      }}
-                      className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
-                      disabled={isPrinting}
-                    >
-                      {isPrinting ? 'Printing...' : 'Print'}
-                    </button>
+                    <div className="flex gap-2 justify-center">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          printQuotation(quotation);
+                        }}
+                        className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
+                        disabled={isPrinting}
+                      >
+                        {isPrinting ? 'Printing...' : 'Print'}
+                      </button>
+                      {!isEmployee && (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleEdit(quotation);
+                            }}
+                            className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleDelete(quotation.id);
+                            }}
+                            className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600"
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

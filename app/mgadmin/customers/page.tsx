@@ -139,7 +139,7 @@ export default function AdminCustomersPage() {
           id: doc.id,
           ...doc.data()
         })) as Customer[];
-        setCustomers(customersData);
+        setCustomers(customersData.sort((a, b) => a.customerName.localeCompare(b.customerName)));
       });
     } else {
       // Employee: load only customers created by this employee
@@ -151,7 +151,7 @@ export default function AdminCustomersPage() {
           id: doc.id,
           ...doc.data()
         })) as Customer[];
-        setCustomers(customersData);
+        setCustomers(customersData.sort((a, b) => a.customerName.localeCompare(b.customerName)));
       });
     }
 
@@ -288,38 +288,40 @@ export default function AdminCustomersPage() {
             <p>Total Customers: ${filteredCustomers.length}</p>
           </div>
 
-          <table>
-            <thead>
-              <tr>
-                <th>System Type</th>
-                <th>Customer Name</th>
-                <th>Mobile</th>
-                <th>Address</th>
-                <th>Pincode</th>
-                <th>Kilowatt</th>
-                <th>Panel Company</th>
-                <th>Inverter Company</th>
-                <th>Quotation Price</th>
-                <th>Deal Price</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${filteredCustomers.map(customer => `
+            <table>
+              <thead>
                 <tr>
-                  <td>${customer.systemType || ''}</td>
-                  <td>${customer.customerName || ''}</td>
-                  <td>${customer.mobileNumber || ''}</td>
-                  <td>${customer.address || ''}</td>
-                  <td>${customer.pincode || ''}</td>
-                  <td>${customer.kilowatt || ''} kW</td>
-                  <td>${customer.panelCompanyName || ''}</td>
-                  <td>${customer.inverterCompanyName || ''}</td>
-                  <td>${customer.quotationPrice ? '₹' + customer.quotationPrice : ''}</td>
-                  <td>${customer.dealPrice ? '₹' + customer.dealPrice : ''}</td>
+                  <th>S.No.</th>
+                  <th>System Type</th>
+                  <th>Customer Name</th>
+                  <th>Mobile</th>
+                  <th>Address</th>
+                  <th>Pincode</th>
+                  <th>Kilowatt</th>
+                  <th>Panel Company</th>
+                  <th>Inverter Company</th>
+                  <th>Quotation Price</th>
+                  <th>Deal Price</th>
                 </tr>
-              `).join('')}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                ${filteredCustomers.map((customer, index) => `
+                  <tr>
+                    <td>${index + 1}</td>
+                    <td>${customer.systemType || ''}</td>
+                    <td>${customer.customerName || ''}</td>
+                    <td>${customer.mobileNumber || ''}</td>
+                    <td>${customer.address || ''}</td>
+                    <td>${customer.pincode || ''}</td>
+                    <td>${customer.kilowatt || ''} kW</td>
+                    <td>${customer.panelCompanyName || ''}</td>
+                    <td>${customer.inverterCompanyName || ''}</td>
+                    <td>${customer.quotationPrice ? '₹' + customer.quotationPrice : ''}</td>
+                    <td>${customer.dealPrice ? '₹' + customer.dealPrice : ''}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
         </body>
       </html>
     `;
@@ -835,12 +837,15 @@ export default function AdminCustomersPage() {
         <CardContent>
           {/* Mobile Card View */}
           <div className="block md:hidden space-y-4">
-            {filteredCustomers.map((customer) => (
+            {filteredCustomers.map((customer, index) => (
               <Card key={customer.id} className="border">
                 <CardContent className="p-4">
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <h3 className="font-semibold">{customer.customerName}</h3>
+                      <div>
+                        <span className="text-sm text-muted-foreground">#{index + 1}</span>
+                        <h3 className="font-semibold">{customer.customerName}</h3>
+                      </div>
                       <div className="flex gap-1">
                         <Button size="sm" variant="outline" onClick={() => handleView(customer)}>
                           <Eye className="w-4 h-4" />
@@ -876,6 +881,7 @@ export default function AdminCustomersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>S.No.</TableHead>
                   <TableHead>System Type</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Mobile</TableHead>
@@ -885,8 +891,9 @@ export default function AdminCustomersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCustomers.map((customer) => (
+                {filteredCustomers.map((customer, index) => (
                   <TableRow key={customer.id}>
+                    <TableCell>{index + 1}</TableCell>
                     <TableCell>{customer.systemType}</TableCell>
                     <TableCell>{customer.customerName}</TableCell>
                     <TableCell>{customer.mobileNumber}</TableCell>
