@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { LayoutDashboard, FolderOpen, MessageSquare, LogOut, Users, UserPlus, Wrench, X, CreditCard, Truck, FileText, Briefcase, Receipt } from 'lucide-react';
 import { signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { getAuth } from '@/lib/firebase';
 
 const adminNavItems = [
   { href: '/mgadmin', label: 'Dashboard', icon: LayoutDashboard },
@@ -51,6 +51,7 @@ export function AdminSidebar({ isEmployee = false, isInstaller = false, onClose,
     try {
       // Sign out from Firebase Auth if admin
       if (!isEmployee && !isInstaller) {
+        const auth = await getAuth();
         await signOut(auth);
       }
     } catch (error) {

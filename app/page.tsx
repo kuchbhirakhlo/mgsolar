@@ -11,8 +11,8 @@ import { ContactSection } from '@/components/sections/contact';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'M.G. Enterprises - Best Solar Panel Dealer & Installer in Lucknow, Uttar Pradesh',
-  description: 'Leading solar panel dealer and installer in Lucknow, UP. Get high-quality solar panels, installation services, and rooftop solar systems. Expert solar solutions for residential and commercial projects.',
+  title: 'Best Solar Panel Dealer & Installation Services in Lucknow | MG Solar Uttar Pradesh',
+  description: 'Looking for reliable solar panel installation in Lucknow, Gorakhpur, Ayodhya, Barabanki, Bahraich, Gonda & Kushinagar? Get affordable rooftop solar installation, maintenance, repair & after-sales services from MG Solar.',
   keywords: [
     'solar panels Lucknow',
     'solar installation Uttar Pradesh',
@@ -27,7 +27,17 @@ export const metadata: Metadata = {
     'grid-connected solar systems',
     'solar quotations Lucknow',
     'solar maintenance services',
-    'green energy solutions UP'
+    'green energy solutions UP',
+    'solar panel price in Lucknow',
+    'best solar company near me',
+    'rooftop solar installation cost in Gorakhpur',
+    'solar subsidy services in Uttar Pradesh',
+    'home solar installation in Ayodhya',
+    'commercial solar installation company in Barabanki',
+    'solar repair near me',
+    'solar maintenance company in Bahraich',
+    'hybrid solar system dealer in Gonda',
+    'solar battery replacement in Kushinagar'
   ],
   authors: [{ name: 'M.G. Enterprises' }],
   creator: 'M.G. Enterprises',
@@ -37,14 +47,14 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL('https://mgsolar.in'), // Assuming domain
+  metadataBase: new URL('https://mgsolar.co.in'), // Assuming domain
   alternates: {
     canonical: '/',
   },
   openGraph: {
     title: 'M.G. Enterprises - Solar Panel Experts in Lucknow',
     description: 'Professional solar panel installation and dealer services in Lucknow, Uttar Pradesh. Quality solar solutions for your home and business.',
-    url: 'https://mgsolar.in',
+    url: 'https://mgsolar.co.in',
     siteName: 'M.G. Enterprises',
     locale: 'en_US',
     type: 'website',
@@ -53,15 +63,15 @@ export const metadata: Metadata = {
         url: '/homeheroimage.jpg',
         width: 1200,
         height: 630,
-        alt: 'M.G. Enterprises Solar Panels',
+        alt: 'MG Solar Panel Installation Services in Lucknow and Uttar Pradesh',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'M.G. Enterprises - Solar Panel Dealer Lucknow',
-    description: 'Best solar panel installation services in Lucknow, UP. Expert solar solutions for residential and commercial projects.',
-    images: ['/homeheroimage.jpg'],
+    title: 'Best Solar Panel Dealer & Installation Services in Lucknow | MG Solar Uttar Pradesh',
+    description: 'Looking for reliable solar panel installation in Lucknow, Gorakhpur, Ayodhya, Barabanki, Bahraich, Gonda & Kushinagar? Get affordable rooftop solar installation, maintenance, repair & after-sales services.',
+    images: [{ url: '/homeheroimage.jpg', alt: 'MG Solar Panel Installation Services in Lucknow and Uttar Pradesh' }],
   },
   robots: {
     index: true,
@@ -87,7 +97,7 @@ export default function Home() {
     "description": "Leading solar panel dealer and installer in Lucknow, Uttar Pradesh. Providing high-quality solar panels, installation services, and renewable energy solutions.",
     "url": "https://mgsolar.co.in",
     "telephone": "+91-XXXXXXXXXX", // Add actual phone
-    "email": "info@mgsolar.in", // Add actual email
+    "email": "mgenterprises0037@gmail.com", // Add actual email
     "address": {
       "@type": "PostalAddress",
       "streetAddress": "Vibhuti Khand, Gomti Nagar",

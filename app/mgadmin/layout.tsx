@@ -7,7 +7,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { getAuth } from '@/lib/firebase';
 
 export default function AdminLayout({
   children,
@@ -56,6 +56,7 @@ export default function AdminLayout({
           }
         } else if (adminLoggedIn) {
           // For admin users, also check Firebase Auth state
+          const auth = await getAuth();
           const unsubscribe = onAuthStateChanged(auth, (user: User | null) => {
             if (!user) {
               // Firebase user not authenticated, clear session and redirect

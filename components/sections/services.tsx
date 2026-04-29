@@ -77,7 +77,7 @@ export function ServicesSection() {
               className="border-muted hover:border-accent hover:shadow-lg transition-all duration-300 overflow-hidden"
             >
               <div className="h-48 overflow-hidden">
-                <img src={service.image} alt="" className="w-full h-full object-cover" />
+                <img src={service.image} alt={service.title} className="w-full h-full object-cover" />
               </div>
               <CardHeader>
                 <CardTitle className="text-2xl text-primary">{service.title}</CardTitle>

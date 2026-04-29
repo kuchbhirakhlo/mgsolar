@@ -3,6 +3,7 @@
 import { useLanguage } from '@/lib/language-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, QuerySnapshot, DocumentData } from 'firebase/firestore';
@@ -155,7 +156,15 @@ export function ProjectsSection() {
             >
               <div className="h-40 bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center group-hover:bg-gradient-to-br group-hover:from-primary/30 group-hover:to-secondary/30 transition-all overflow-hidden">
                 {project.image && project.image.startsWith('http') ? (
-                  <img src={project.image} alt={project.title} className="w-full h-full object-cover" />
+                  <Image
+                    src={project.image}
+                    alt={project.title}
+                    width={300}
+                    height={160}
+                    className="w-full h-full object-cover"
+                    unoptimized
+                    loading="lazy"
+                  />
                 ) : (
                   project.icon!
                 )}

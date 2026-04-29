@@ -9,8 +9,8 @@ export const translations = {
       contact: 'Contact',
     },
     hero: {
-      title: 'MG Solar  for a Sustainable Future',
-      subtitle: 'Powering homes and businesses with clean, renewable energy',
+      title: 'Best Solar Panel Dealer & Installation Services in Lucknow, Gorakhpur & Uttar Pradesh',
+      subtitle: 'Powering homes and businesses with clean, renewable energy for a sustainable future',
       cta: 'Get Started',
     },
     services: {

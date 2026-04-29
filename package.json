@@ -2,6 +2,12 @@
   "name": "my-project",
   "version": "0.1.0",
   "private": true,
+  "browserslist": [
+    "defaults",
+    "not ie 11",
+    "not ie_mob 11",
+    "maintained node versions"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
