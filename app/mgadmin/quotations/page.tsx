@@ -39,7 +39,7 @@ interface Quotation {
   address: string;
   price: string;
   mobileNumber: string;
-  email: string;
+  batteryCompanyName: string;
   systemType: string;
   kilowatt: string;
   panelCompanyName: string;
@@ -121,7 +121,7 @@ const QuotationPDF = ({ form }: { form: any }) => (
       <Text style={styles.quotationNo}>Quotation No: {form.quotationNo}</Text>
       <View style={{ marginTop: 40 }}>
         <Text style={styles.text}>To,</Text>
-        <Text style={styles.text}>Customer Name: {form.customerName}</Text>
+        <Text style={styles.text}>Customer Name: <Text style={{ fontWeight: 'bold' }}>{form.customerName}</Text></Text>
         <Text style={styles.text}>Address: {form.address}</Text>
         <Text style={styles.text}>Subject: {form.kilowatt} KW Solar Quotation for Supply & Installation of Rooftop System</Text>
         <Text style={styles.text}>Dear Sir/Madam,</Text>
@@ -185,6 +185,11 @@ const QuotationPDF = ({ form }: { form: any }) => (
             <Text style={styles.tableCell}>9</Text>
             <Text style={styles.tableCell}>Warranty</Text>
             <Text style={styles.tableCell}>Panel: 25+ Years, Inverter: 5–10 Years</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableCell}>10</Text>
+            <Text style={styles.tableCell}>Battery</Text>
+            <Text style={styles.tableCell}>{form.batteryCompanyName}</Text>
           </View>
         </View>
       </View>
@@ -274,7 +279,7 @@ export default function QuotationPage() {
     address: "",
     price: "",
     mobileNumber: "",
-    email: "",
+    batteryCompanyName: "",
     systemType: "",
     kilowatt: "",
     panelCompanyName: "",
@@ -386,7 +391,7 @@ export default function QuotationPage() {
               customerId: customer.id,
               customerName: customer.customerName || "",
               address: customer.address || "",
-              email: customer.email || "",
+              batteryCompanyName: customer.batteryCompanyName || "",
               systemType: customer.systemType || "",
               kilowatt: kilowattValue,
               panelCompanyName: customer.panelCompanyName || "",
@@ -404,7 +409,7 @@ export default function QuotationPage() {
               customerId: "",
               customerName: "",
               address: "",
-              email: "",
+              batteryCompanyName: "",
               systemType: "",
               kilowatt: "",
               panelCompanyName: "",
@@ -437,7 +442,7 @@ export default function QuotationPage() {
       address: quotation.address,
       price: quotation.price,
       mobileNumber: quotation.mobileNumber,
-      email: quotation.email,
+      batteryCompanyName: quotation.batteryCompanyName,
       systemType: quotation.systemType,
       kilowatt: quotation.kilowatt,
       panelCompanyName: quotation.panelCompanyName,
@@ -494,7 +499,7 @@ export default function QuotationPage() {
         setIsEditing(false);
         setSelectedQuotation(null);
         // Reset form for new quotation (quotationNo and date will be updated by useEffect)
-        setForm(prev => ({ ...prev, customerId: "", customerName: "", address: "", email: "", systemType: "", kilowatt: "", panelCompanyName: "", inverterCompanyName: "", referredBy: "", price: "" }));
+        setForm(prev => ({ ...prev, customerId: "", customerName: "", address: "", batteryCompanyName: "", systemType: "", kilowatt: "", panelCompanyName: "", inverterCompanyName: "", referredBy: "", price: "" }));
       });
     }
   };
@@ -623,7 +628,7 @@ export default function QuotationPage() {
             <button onClick={fetchCustomer} className="bg-blue-500 text-white px-4 py-2">Fetch Customer</button>
           </div>
           <input name="customerName" value={form.customerName} onChange={handleChange} placeholder="Customer Name" className="border p-2"/>
-          <input name="email" value={form.email} onChange={handleChange} placeholder="Email" className="border p-2"/>
+          <input name="batteryCompanyName" value={form.batteryCompanyName} onChange={handleChange} placeholder="Battery Company" className="border p-2"/>
           <input name="address" value={form.address} onChange={handleChange} placeholder="Address" className="border p-2"/>
           <input name="kilowatt" value={form.kilowatt} onChange={handleChange} placeholder="Kilowatt" className="border p-2"/>
           <input name="systemType" value={form.systemType} onChange={handleChange} placeholder="System Type" className="border p-2"/>
@@ -669,7 +674,7 @@ export default function QuotationPage() {
             {/* TO SECTION */}
             <div className="mt-6 text-sm space-y-1">
               <p>To,</p>
-              <p>Customer Name: {form.customerName}</p>
+              <p>Customer Name: <strong>{form.customerName}</strong></p>
               <p>Address: {form.address}</p>
                <p>
                  Subject: {form.kilowatt} KW Solar Quotation for Supply & Installation of Rooftop System
@@ -710,6 +715,7 @@ export default function QuotationPage() {
                   <tr><td className="border p-2">7</td><td className="border p-2">Wire</td><td className="border p-2">Polycab (4 sq mm)</td></tr>
                   <tr><td className="border p-2">8</td><td className="border p-2">Earthing</td><td className="border p-2">Green (4 sq mm)</td></tr>
                   <tr><td className="border p-2">9</td><td className="border p-2">Warranty</td><td className="border p-2">Panel: 25+ Years, Inverter: 5–10 Years</td></tr>
+                  <tr><td className="border p-2">10</td><td className="border p-2">Battery</td><td className="border p-2">{form.batteryCompanyName}</td></tr>
                 </tbody>
               </table>
             </div>
@@ -831,10 +837,10 @@ export default function QuotationPage() {
 
             {/* AGREEMENT CONTENT */}
             <div className="text-sm space-y-2">
-              <p>This agreement is executed on {form.date} for design, supply, installation, commissioning and 5-year comprehensive maintenance of RTS project/system along with warranty under PM Surya Ghar: Muft Bijli Yojana.</p>
+               <p>This agreement is executed on {form.date} for design, supply, installation, commissioning and 5-year comprehensive maintenance of RTS project/system along with warranty under PM Surya Ghar: Muft Bijli Yojana.</p>
 
-              <p><strong>Between</strong></p>
-              <p>{form.customerName} address {form.address}, (hereinafter referred to as first Party i.e.)</p>
+               <p><strong>Between</strong></p>
+               <p><strong>{form.customerName}</strong> address {form.address}, (hereinafter referred to as first Party i.e.)</p>
 
               <p><strong>And</strong></p>
               <p>M.G. ENTERPRISES having registered office at D - 62, 2nd Floor Vibhuti khand gomti nagar, Lucknow U.P. 226010, Phone :- +91- 8736915465, 9415336145.</p>
@@ -957,13 +963,13 @@ export default function QuotationPage() {
               <p>Total system cost: ₹ {form.price}/- (to be filled based on invoice)</p>
               <p>Payment Schedule: 100% advance payment before installation.</p>
 
-              <div className="flex justify-between mt-4">
-                <div className="text-center">
-                  <p><strong>First Party</strong></p>
-                  <p>{form.customerName}</p>
-                  <p className="mt-4">Sign:</p>
-                  <p>___________________________</p>
-                </div>
+               <div className="flex justify-between mt-4">
+                 <div className="text-center">
+                   <p><strong>First Party</strong></p>
+                   <p><strong>{form.customerName}</strong></p>
+                   <p className="mt-4">Sign:</p>
+                   <p>___________________________</p>
+                 </div>
                 <div className="text-center">
                   <p><strong>Second Party</strong></p>
                   <p>M.G. ENTERPRISES</p>
