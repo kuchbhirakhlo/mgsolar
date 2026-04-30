@@ -262,22 +262,8 @@ export default function AdminInstallationsPage() {
     setViewDialog(true);
   };
 
-  const handleDownloadPhoto = async (photoUrl: string, installationId?: string) => {
-    try {
-      const response = await fetch(photoUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `installation_${installationId || selectedInstallation?.id}_${Date.now()}.jpg`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Error downloading photo:', error);
-      alert('Failed to download photo. Please check your internet connection and try again.');
-    }
+  const handleDownloadPhoto = (photoUrl: string) => {
+    window.open(photoUrl, '_blank');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -638,18 +624,18 @@ export default function AdminInstallationsPage() {
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <h3 className="font-semibold">{cust?.customerName || 'Unknown'}</h3>
-                         <div className="flex gap-1">
-                           <Button size="sm" variant="outline" onClick={() => handleView(inst)}>
-                             <Eye className="w-4 h-4" />
-                           </Button>
-                           {inst.photoUrl && (
-                             <Button size="sm" variant="outline" onClick={() => handleDownloadPhoto(inst.photoUrl!, inst.id)}>
-                               <Download className="w-4 h-4" />
-                             </Button>
-                           )}
-                           <Button size="sm" variant="outline" onClick={() => handleEdit(inst)}>
-                             <Edit2 className="w-4 h-4" />
-                           </Button>
+                          <div className="flex gap-1">
+                            <Button size="sm" variant="outline" onClick={() => handleView(inst)}>
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            {inst.photoUrl && (
+                              <Button size="sm" variant="outline" onClick={() => handleDownloadPhoto(inst.photoUrl!)}>
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                            )}
+                            <Button size="sm" variant="outline" onClick={() => handleEdit(inst)}>
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
                            {!isEmployee && !isInstaller && (
                              <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDelete(inst.id)}>
                                <Trash2 className="w-4 h-4" />
@@ -691,18 +677,18 @@ export default function AdminInstallationsPage() {
                       <TableCell>{inst.panelSerialNumbers.length}</TableCell>
                       <TableCell>{new Date(inst.createdAt).toLocaleDateString()}</TableCell>
                        <TableCell>
-                         <div className="flex gap-2">
-                           <Button size="sm" variant="outline" onClick={() => handleView(inst)}>
-                             <Eye className="w-4 h-4" />
-                           </Button>
-                           {inst.photoUrl && (
-                             <Button size="sm" variant="outline" onClick={() => handleDownloadPhoto(inst.photoUrl!, inst.id)}>
-                               <Download className="w-4 h-4" />
-                             </Button>
-                           )}
-                           <Button size="sm" variant="outline" onClick={() => handleEdit(inst)}>
-                             <Edit2 className="w-4 h-4" />
-                           </Button>
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" onClick={() => handleView(inst)}>
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            {inst.photoUrl && (
+                              <Button size="sm" variant="outline" onClick={() => handleDownloadPhoto(inst.photoUrl!)}>
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                            )}
+                            <Button size="sm" variant="outline" onClick={() => handleEdit(inst)}>
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
                            {!isEmployee && !isInstaller && (
                              <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDelete(inst.id)}>
                                <Trash2 className="w-4 h-4" />
@@ -744,11 +730,11 @@ export default function AdminInstallationsPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleDownloadPhoto(selectedInstallation.photoUrl!, selectedInstallation.id)}
+                      onClick={() => handleDownloadPhoto(selectedInstallation.photoUrl!)}
                       className="flex items-center gap-2 ml-2"
                     >
-                      <Download className="w-4 h-4" />
-                      Download
+                      <Eye className="w-4 h-4" />
+                      View
                     </Button>
                   </div>
                 )}
