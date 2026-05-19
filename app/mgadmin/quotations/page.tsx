@@ -88,11 +88,11 @@ const styles = StyleSheet.create({
   },
   headerImage: {
     width: '100%',
-    height: 50,
+    height: 22,
   },
   footerImage: {
     width: '100%',
-    height: 20,
+    height: 10,
   },
   quotationNo: {
     position: 'absolute',
@@ -114,9 +114,6 @@ const QuotationPDF = ({ form }: { form: any }) => (
   <Document>
     {/* Page 1 */}
     <Page size="A4" style={styles.page}>
-      <View style={styles.watermark}>
-        <PDFImage src="/mgsolarlogo.jpeg" style={{ width: 200, height: 200 }} />
-      </View>
       <PDFImage src="/mgsolarheader.png" style={styles.headerImage} />
       <Text style={styles.quotationNo}>Quotation No: {form.quotationNo}</Text>
       <View style={{ marginTop: 40 }}>
@@ -199,9 +196,6 @@ const QuotationPDF = ({ form }: { form: any }) => (
     </Page>
     {/* Page 2 */}
     <Page size="A4" style={styles.page}>
-      <View style={styles.watermark}>
-        <PDFImage src="/mgsolarlogo.jpeg" style={{ width: 200, height: 200 }} />
-      </View>
       <PDFImage src="/mgsolarheader.png" style={styles.headerImage} />
       <View style={{ marginTop: 40 }}>
         <Text style={styles.header}>PRICE BREAKUP</Text>
@@ -251,7 +245,7 @@ const QuotationPDF = ({ form }: { form: any }) => (
         <Text style={styles.text}>Warranties shall be as per manufacturer terms.</Text>
         <Text style={styles.text}>Prices and approvals are subject to applicable rules and regulations.</Text>
         <Text style={styles.text}>Consumer Name: {form.customerName}</Text>
-        <PDFImage src="/mohar.png" style={{ width: 100, height: 50, marginTop: 10, alignSelf: 'flex-end' }} />
+        <PDFImage src="/mohar.png" style={{ width: 55, height: 28, marginTop: 10, alignSelf: 'flex-end' }} />
         <Text style={styles.text}>Authorized Signatory M.G. ENTERPRISES</Text>
        </View>
        <View style={styles.footer}>
@@ -270,6 +264,7 @@ export default function QuotationPage() {
   const [isEditing, setIsEditing] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const mountedRef = useRef(true);
+  const editFormRef = useRef<HTMLDivElement>(null);
 
   const [form, setForm] = useState({
     quotationNo: "",
@@ -450,6 +445,9 @@ export default function QuotationPage() {
       referredBy: quotation.referredBy,
     });
     setIsEditing(true);
+    setTimeout(() => {
+      editFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   };
 
   const handleDelete = async (id: string) => {
@@ -609,6 +607,7 @@ export default function QuotationPage() {
         setForm(originalForm);
       }
       setIsPrinting(false);
+      window.location.reload();
     }
   };
 
@@ -617,7 +616,7 @@ export default function QuotationPage() {
 
       {/* 🔧 FORM - Only visible to admins */}
       {!isEmployee && (
-        <div className="max-w-4xl mx-auto bg-white p-4 mb-6 shadow text-sm">
+        <div ref={editFormRef} className="max-w-4xl mx-auto bg-white p-4 mb-6 shadow text-sm">
           <h2 className="font-bold mb-3">{isEditing ? 'Edit Quotation' : 'Create New Quotation'}</h2>
 
         <div className="grid grid-cols-2 gap-2">
