@@ -61,8 +61,8 @@ export function Header() {
             <Image
               src="/mgsolarlogo.jpeg"
               alt="MG Solar Logo"
-              width={20}
-              height={15}
+              width={80}
+              height={60}
               className="h-15 w-20 object-contain"
               suppressHydrationWarning
             />
